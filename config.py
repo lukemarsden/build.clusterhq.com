@@ -17,6 +17,16 @@ from flocker_bb import privateData
 USER = privateData['auth']['user'].encode("utf-8")
 PASSWORD = privateData['auth']['password'].encode("utf-8")
 
+from flocker_bb.zulip import createZulip, ZulipLogger
+from twisted.internet import reactor
+
+if 'zulip' in privateData:
+    ZULIP_BOT = privateData['zulip']['user']
+    ZULIP_KEY = privateData['zulip']['password']
+    zulip = createZulip(reactor, ZULIP_BOT, ZULIP_KEY)
+
+    ZulipLogger(zulip=zulip, stream="BuildBot - Operation").start()
+
 
 ####### BUILDSLAVES
 
@@ -26,7 +36,7 @@ PASSWORD = privateData['auth']['password'].encode("utf-8")
 c['slavePortnum'] = 9989
 
 from flocker_bb.password import generate_password
-from flocker_bb.ec2_buildslave import EC2LatentBuildSlave
+from flocker_bb.ec2_buildslave import EC2BuildSlave
 from buildbot.buildslave import BuildSlave
 
 cloudInit = FilePath(__file__).sibling("slave").child("cloud-init.sh").getContent()
@@ -40,16 +50,14 @@ for base, slaveConfig in privateData['slaves'].items():
         for i in range(slaveConfig['slaves']):
             name = '%s-%d' % (base, i)
             password = generate_password(32)
-            ami = r'.*/%s$' % (slaveConfig['ami'],)
 
             SLAVENAMES[base].append(name)
             c['slaves'].append(
-                EC2LatentBuildSlave(
+                EC2BuildSlave(
                     name, password,
                     instance_type=slaveConfig['instance_type'],
                     build_wait_timeout=50*60,
-                    valid_ami_owners=[121466501720],
-                    valid_ami_location_regex=ami,
+                    image_name=slaveConfig['ami'],
                     region='us-west-2',
                     security_name='ssh',
                     keypair_name='hybrid-master',
@@ -64,20 +72,17 @@ for base, slaveConfig in privateData['slaves'].items():
                         'buildmaster_host': privateData['buildmaster']['host'],
                         'buildmaster_port': c['slavePortnum'],
                         },
-                    spot_instance='max_spot_price' in slaveConfig,
-                    max_spot_price=slaveConfig.get('max_spot_price', None),
                     keepalive_interval=60,
                     tags={
-                        u'Name': name,
-                        u'Image': slaveConfig['ami'],
-                        u'Class': base,
-                        u'BuildMaster': privateData['buildmaster']['host'],
+                        'Image': slaveConfig['ami'],
+                        'Class': base,
+                        'BuildMaster': privateData['buildmaster']['host'],
                         },
                     ))
     else:
         for i, password in enumerate(slaveConfig['passwords']):
             name = '%s-%d' % (base, i)
-            SLAVENAMES[base] = [name]
+            SLAVENAMES[base].append(name)
             c['slaves'].append(BuildSlave(name, password=password))
 
 
@@ -103,17 +108,6 @@ c['change_source'] = []
 
 ####### BUILDERS
 
-def rebuild(module):
-    # Specify fromlist, so that __import__ returns the module, not the
-    # top-level package
-    reload(__import__(module, fromlist=['__path__']))
-
-rebuild('flocker_bb.steps')
-rebuild('flocker_bb.builders.flocker')
-rebuild('flocker_bb.builders.flocker_vagrant')
-rebuild('flocker_bb.builders.maint')
-
-
 from flocker_bb.builders import flocker, maint, flocker_vagrant
 
 c['builders'] = []
@@ -137,12 +131,9 @@ addBuilderModule(maint)
 
 c['status'] = []
 
-rebuild('flocker_bb.github')
-from flocker_bb.github import codebaseStatus
+from flocker_bb.github import createGithubStatus
 if privateData['github']['report_status']:
-    c['status'].append(codebaseStatus('flocker', token=privateData['github']['token']))
-
-rebuild('flocker_bb.boxes')
+    c['status'].append(createGithubStatus('flocker', token=privateData['github']['token']))
 
 from flocker_bb.boxes import FlockerWebStatus as WebStatus
 from buildbot.status.web import authz
@@ -172,14 +163,11 @@ c['status'].append(WebStatus(
     jinja_loaders=[jinja2.FileSystemLoader(sibpath(__file__, 'templates'))],
     change_hook_dialects={'github': True}))
 
-rebuild('flocker_bb.zulip_status')
-from flocker_bb.zulip_status import createZulipStatus
-from twisted.internet import reactor
 
+from flocker_bb.zulip_status import createZulipStatus
 if 'zulip' in privateData:
-    ZULIP_BOT = privateData['zulip']['user']
-    ZULIP_KEY = privateData['zulip']['password']
-    c['status'].append(createZulipStatus(reactor, ZULIP_BOT, ZULIP_KEY))
+    ZULIP_STREAM = privateData['zulip'].get('stream', u"BuildBot")
+    c['status'].append(createZulipStatus(zulip, ZULIP_STREAM))
 
 ####### PROJECT IDENTITY
 

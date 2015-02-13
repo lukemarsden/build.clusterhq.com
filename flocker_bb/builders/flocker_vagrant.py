@@ -9,22 +9,22 @@ from ..steps import (
     getFactory,
     GITHUB,
     buildbotURL,
-    MasterWriteFile, asJSON
+    MasterWriteFile, asJSON,
+    flockerBranch,
+    resultPath, resultURL
     )
 
 # FIXME
 from flocker_bb.builders.flocker import installDependencies, _flockerTests
 
-# This is where temporary files associated with a build will be dumped.
-TMPDIR = Interpolate(b"%(prop:workdir)s/tmp-%(prop:buildnumber)s")
-
-flockerBranch = Interpolate("%(src:flocker:branch)s")
-
 
 def dotted_version(version):
     @renderer
     def render(props):
-        return props.render(version).addCallback(lambda v: v.replace('-', '.'))
+        return (props.render(version)
+                .addCallback(lambda v: v.replace('-', '.')
+                                        .replace('_', '.')
+                                        .replace('+', '.')))
     return render
 
 
@@ -55,6 +55,7 @@ def buildVagrantBox(box, add=True):
             description=['building', 'base', box, 'box'],
             descriptionDone=['build', 'base', box, 'box'],
             command=[
+                virtualenvBinary('python'),
                 'admin/build-vagrant-box',
                 '--box', box,
                 '--branch', flockerBranch,
@@ -83,9 +84,7 @@ def buildVagrantBox(box, add=True):
         name='write-base-box-metadata',
         description=['writing', 'base', box, 'box', 'metadata'],
         descriptionDone=['write', 'base', box, 'box', 'metadata'],
-        path=Interpolate(
-            b"private_html/vagrant/%(kw:branch)s/flocker-%(kw:box)s.json",
-            branch=flockerBranch, box=box),
+        path=resultPath('vagrant', discriminator="flocker-%s.json" % box),
         content=asJSON({
             "name": "clusterhq/flocker-%s" % (box,),
             "description": "Test clusterhq/flocker-%s box." % (box,),
@@ -102,8 +101,7 @@ def buildVagrantBox(box, add=True):
         }),
         urls={
             Interpolate('%(kw:box)s box', box=box):
-            Interpolate(b"/results/vagrant/%(kw:branch)s/flocker-%(kw:box)s.json",  # noqa
-                branch=flockerBranch, box=box),
+            resultURL('vagrant', discriminator="flocker-%s.json" % box),
         }
     ))
 
@@ -173,6 +171,12 @@ def buildTutorialBox():
     factory.addStep(Trigger(
         name='trigger-vagrant-tests',
         schedulerNames=['trigger/built-vagrant-box/flocker-tutorial'],
+        set_properties={
+            # lint_revision is the commit that was merged against,
+            # if we merged forward, so have the triggered build
+            # merge against it as well.
+            'merge_target': Property('lint_revision')
+        },
         updateSourceStamp=True,
         waitForFinish=False,
         ))
@@ -182,9 +186,15 @@ def buildTutorialBox():
 def run_acceptance_tests(distribution, provider):
     factory = getFlockerFactory()
     factory.addSteps(_flockerTests(
-        kwargs={'trialMode': []},
+        kwargs={
+            'trialMode': [],
+            # Allow 5 minutes for acceptance test runner to shutdown gracefully
+            # In particular, this allows it to clean up the VMs it spawns.
+            'sigtermTime': 5*60,
+        },
         tests=[],
         trial=[
+            virtualenvBinary('python'),
             Interpolate('%(prop:builddir)s/build/admin/run-acceptance-tests'),
             '--distribution', distribution,
             '--provider', provider,
@@ -314,7 +324,7 @@ BUILDERS = [
     'flocker/acceptance/vagrant/fedora-20',
     ]
 
-MASTER_RELEASE_RE = r"(master|release/|[0-9]+\.[0-9]+\.[0-9]+((pre|dev)[0-9]+)?)"  # noqa
+from ..steps import MergeForward
 
 
 def getSchedulers():
@@ -326,11 +336,10 @@ def getSchedulers():
             codebases={
                 "flocker": {"repository": GITHUB + b"/flocker"},
             },
-            properties={
-                "github-status": False,
-            },
             change_filter=ChangeFilter(
-                branch_re=MASTER_RELEASE_RE,
+                branch_fn=lambda branch:
+                    (MergeForward._isMaster(branch)
+                        or MergeForward._isRelease(branch)),
                 )
         ),
         Triggerable(
@@ -338,9 +347,6 @@ def getSchedulers():
             builderNames=['flocker-vagrant-tutorial-box'],
             codebases={
                 "flocker": {"repository": GITHUB + b"/flocker"},
-            },
-            properties={
-                "github-status": False,
             },
         ),
         ForceScheduler(
@@ -353,7 +359,7 @@ def getSchedulers():
                                               default=GITHUB + b"/flocker"),
                     ),
                 ],
-            properties=[FixedParameter("github-status", default=False)],
+            properties=[],
             builderNames=BUILDERS,
             ),
         Triggerable(
@@ -364,9 +370,6 @@ def getSchedulers():
             ],
             codebases={
                 "flocker": {"repository": GITHUB + b"/flocker"},
-            },
-            properties={
-                "github-status": False,
             },
         ),
         ]
