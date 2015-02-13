@@ -446,10 +446,3 @@ class EC2LatentBuildSlave(AbstractLatentBuildSlave):
             return result
         original.addCallback(propagate)
         return new
-
-
-    def detached(self. mind):
-        for sb in self.slavebuilders:
-            sb.builder.builder_status.addPointEvent(['disconnect', self..slavename])
-            sb.detached()
-        AbstractLatentBuildSlave.detached(self, mind)
