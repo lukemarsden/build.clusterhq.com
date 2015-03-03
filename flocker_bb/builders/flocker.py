@@ -335,6 +335,10 @@ def makeInternalDocsFactory():
             # https://github.com/GoogleCloudPlatform/gsutil/issues/247
             "s3cmd", "sync",
             '--verbose',
+            # MIME type detection does not work with python-magic
+            # https://github.com/s3tools/s3cmd/issues/198
+            '--no-mime-magic',
+            '--guess-mime-type',
             '--delete-removed',
             '--no-preserve',
             # s3cmd needs a trailing slash.
