@@ -3,7 +3,7 @@ FROM fedora:20
 ADD tomprince-hybridlogic-fedora-20-x86_64.repo /etc/yum.repos.d/
 #RUN yum upgrade -y
 RUN yum install -y python-devel python-pip gcc libffi-devel openssl-devel git s3cmd dpkg-dev createrepo_c
-# A new s3cmd is necessary to use the --no-mime-magic option
+# A new enough s3cmd is necessary to use the --no-mime-magic option
 RUN yum upgrade -y s3cmd
 RUN ["pip", "install", "buildbot==0.8.10", "txgithub==15.0.0", "eliot", "apache-libcloud", "service_identity", "machinist", "prometheus_client"]
 
