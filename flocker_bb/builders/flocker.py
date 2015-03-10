@@ -4,7 +4,8 @@ from collections import Counter
 from buildbot.steps.shell import ShellCommand, SetPropertyFromCommand
 from buildbot.steps.python_twisted import Trial
 from buildbot.steps.python import Sphinx
-from buildbot.steps.transfer import DirectoryUpload, StringDownload
+from buildbot.steps.transfer import (
+    DirectoryUpload, FileDownload, FileUpload, StringDownload)
 from buildbot.steps.master import MasterShellCommand
 from buildbot.steps.source.git import Git
 from buildbot.process.properties import Interpolate, Property
@@ -21,6 +22,7 @@ from ..steps import (
     pip,
     isMasterBranch, isReleaseBranch,
     resultPath, resultURL,
+    buildbotURL
     )
 
 # This is where temporary files associated with a build will be dumped.
@@ -337,7 +339,8 @@ def makeInternalDocsFactory():
             '--verbose',
             '--delete-removed',
             '--no-preserve',
-            resultPath('docs'),
+            # s3cmd needs a trailing slash.
+            Interpolate("%(kw:path)s/", path=resultPath('docs')),
             Interpolate(
                 "s3://%(kw:bucket)s/%(prop:version)s/",
                 bucket='clusterhq-dev-docs',
@@ -375,7 +378,7 @@ def createRepository(distribution, repository_path):
     return steps
 
 
-def makeOmnibusFactory(distribution, triggerSchedulers=()):
+def makeOmnibusFactory(distribution):
     factory = getFlockerFactory(python="python2.7")
     factory.addStep(SetPropertyFromCommand(
         command=["python", "setup.py", "--version"],
@@ -416,19 +419,103 @@ def makeOmnibusFactory(distribution, triggerSchedulers=()):
         name="upload-repo",
     ))
     factory.addSteps(createRepository(distribution, repository_path))
-    if triggerSchedulers:
-        factory.addStep(Trigger(
-            name='trigger/built-rpms',
-            schedulerNames=triggerSchedulers,
-            set_properties={
-                # lint_revision is the commit that was merged against,
-                # if we merged forward, so have the triggered build
-                # merge against it as well.
-                'merge_target': Property('lint_revision')
+    factory.addStep(Trigger(
+        name='trigger/built-packages',
+        schedulerNames=['trigger/built-packages/%s' % (distribution,)],
+        set_properties={
+            # lint_revision is the commit that was merged against,
+            # if we merged forward, so have the triggered build
+            # merge against it as well.
+            'merge_target': Property('lint_revision')
+        },
+        updateSourceStamp=True,
+        waitForFinish=False,
+        ))
+
+    return factory
+
+
+def makeHomebrewRecipeCreationFactory():
+    factory = getFlockerFactory(python="python2.7")
+    factory.addStep(SetPropertyFromCommand(
+        command=["python", "setup.py", "--version"],
+        name='check-version',
+        description=['checking', 'version'],
+        descriptionDone=['checking', 'version'],
+        property='version'
+    ))
+    factory.addSteps(installDependencies())
+    factory.addStep(ShellCommand(
+        name='build-sdist',
+        description=["building", "sdist"],
+        descriptionDone=["build", "sdist"],
+        command=[
+            virtualenvBinary('python'),
+            "setup.py", "sdist",
+            ],
+        haltOnFailure=True))
+    factory.addStep(FileUpload(
+        slavesrc=Interpolate('/flocker/dist/Flocker-%(prop:version)s.tar.gz'),
+        masterdest=Interpolate(
+            '~/public_html/flocker/dist/Flocker-%(prop:version)s.tar.gz')
+    ))
+
+    # Run admin/homebrew.py with BuildBot sdist URL as argument
+    dist_url = Interpolate(
+        "%(kw:base_url)s%(kw:url)s/Flocker-%(prop:version)s.rb",
+        base_url=buildbotURL,
+        url=resultURL('homebrew'),
+    )
+    factory.addStep(ShellCommand(
+        name='make-homebrew-recipe',
+        description=["building", "recipe"],
+        descriptionDone=["build", "recipe"],
+        command=[
+            "VERSION=Dev", "admin/make-homebrew-recipe", dist_url, ">",
+            "FlockerDev.rb"],
+        haltOnFailure=True))
+
+    # Upload new .rb file to BuildBot master
+    factory.addStep(FileUpload(
+        slavesrc="FlockerDev.rb",
+        masterdest=resultPath('homebrew')
+    ))
+
+    # Trigger the homebrew-test build
+    factory.addStep(Trigger(
+        name='trigger-homebrew-test',
+        schedulerNames=['trigger/homebrew-created'],
+        set_properties={
+            'master_recipe': Interpolate("~/Flocker%(prop:buildnumber)s.rb")
             },
-            updateSourceStamp=True,
-            waitForFinish=False,
-            ))
+        waitForFinish=False,
+        ))
+
+    # XXX - maybe the above should be waitForFinish=True, and then this
+    # XXX - build deletes the sdist and Homebrew files on master?
+
+    return factory
+
+
+def makeHomebrewRecipeTestFactory():
+    factory = getFlockerFactory(python="python2.7")
+    factory.addStep(SetPropertyFromCommand(
+        command=["python", "setup.py", "--version"],
+        name='check-version',
+        description=['checking', 'version'],
+        descriptionDone=['checking', 'version'],
+        property='version'
+    ))
+
+    # Run testbrew script
+    recipe_url = resultURL(Property('master_recipe'))
+    factory.addStep(ShellCommand(
+        name='run-homebrew-test',
+        description=["running", "recipe"],
+        descriptionDone=["run", "recipe"],
+        command=[
+            "python", "admin/testbrew.py", recipe_url],
+        haltOnFailure=True))
 
     return factory
 
@@ -437,18 +524,19 @@ from buildbot.config import BuilderConfig
 from buildbot.schedulers.basic import AnyBranchScheduler
 from buildbot.schedulers.forcesched import (
     CodebaseParameter, StringParameter, ForceScheduler, FixedParameter)
+from buildbot.schedulers.triggerable import Triggerable
 from buildbot.locks import SlaveLock
+
+from ..steps import report_expected_failures_parameter
 
 # A lock to prevent multiple functional tests running at the same time
 functionalLock = SlaveLock('functional-tests')
 
-OMNIBUS_DISTRIBUTIONS = {
-    'fedora-20': {
-        'triggers': ['trigger/built-rpms/fedora-20'],
-    },
-    'ubuntu-14.04': {},
-    'centos-7': {}
-}
+OMNIBUS_DISTRIBUTIONS = [
+    'fedora-20',
+    'ubuntu-14.04',
+    'centos-7',
+]
 
 
 def idleSlave(builder, slavebuilders):
@@ -495,6 +583,11 @@ def getBuilders(slavenames):
                       factory=makeFactory(b'python2.7'),
                       locks=[functionalLock.access('counting')],
                       nextSlave=idleSlave),
+        BuilderConfig(name='flocker-osx-10.10',
+                      slavenames=slavenames['osx'],
+                      category='flocker',
+                      factory=makeFactory(b'python2.7'),
+                      nextSlave=idleSlave),
         BuilderConfig(name='flocker-zfs-head',
                       slavenames=slavenames['fedora-zfs-head'],
                       category='flocker',
@@ -527,10 +620,19 @@ def getBuilders(slavenames):
                       slavenames=slavenames['fedora'],
                       category='flocker',
                       factory=makeAdminFactory(),
-                      locks=[functionalLock.access('counting')],
+                      nextSlave=idleSlave),
+        BuilderConfig(name='flocker-homebrew-creation',
+                      slavenames=slavenames['fedora'],
+                      category='flocker',
+                      factory=makeHomebrewRecipeCreationFactory(),
+                      nextSlave=idleSlave),
+        BuilderConfig(name='flocker-homebrew-test',
+                      slavenames=slavenames['osx'],
+                      category='flocker',
+                      factory=makeHomebrewRecipeTestFactory(),
                       nextSlave=idleSlave),
         ]
-    for distribution, config in OMNIBUS_DISTRIBUTIONS.items():
+    for distribution in OMNIBUS_DISTRIBUTIONS:
         builders.append(
             BuilderConfig(
                 name='flocker-omnibus-%s' % (distribution,),
@@ -538,7 +640,6 @@ def getBuilders(slavenames):
                 category='flocker',
                 factory=makeOmnibusFactory(
                     distribution=distribution,
-                    triggerSchedulers=config.get('triggers'),
                 ),
                 nextSlave=idleSlave,
                 ))
@@ -550,7 +651,6 @@ def getBuilders(slavenames):
     for slavenames, slave_builders in groupby(locked_builders,
                                               key=lambda b: b.slavenames):
         for builder, slavename in zip(slave_builders, slavenames):
-            print builder.name, slavename
             builder.slavenames = [slavename]
 
     return builders
@@ -559,14 +659,16 @@ BUILDERS = [
     'flocker-fedora-20',
     'flocker-ubuntu-14.04',
     'flocker-centos-7',
+    'flocker-osx-10.10',
     'flocker-twisted-trunk',
     'flocker-coverage',
     'flocker-lint',
     'flocker-docs',
     'flocker-zfs-head',
     'flocker-admin',
+    'flocker-homebrew-creation',
 ] + [
-    'flocker-omnibus-%s' % (dist,) for dist in OMNIBUS_DISTRIBUTIONS.keys()
+    'flocker-omnibus-%s' % (dist,) for dist in OMNIBUS_DISTRIBUTIONS
 ]
 
 
@@ -585,12 +687,23 @@ def getSchedulers():
             codebases=[
                 CodebaseParameter(
                     "flocker",
-                    branch=StringParameter("branch", default="master"),
+                    branch=StringParameter(
+                        "branch", default="master", size=80),
                     repository=FixedParameter(
                         "repository", default=GITHUB + b"/flocker"),
-                    ),
-                ],
-            properties=[],
+                ),
+            ],
+            properties=[
+                report_expected_failures_parameter,
+            ],
             builderNames=BUILDERS,
             ),
+        Triggerable(
+            name='trigger/homebrew-created',
+            builderNames=['flocker-homebrew-test'],
+            codebases={
+                "flocker": {"repository": GITHUB + b"/flocker"},
+            },
+        ),
+
         ]
