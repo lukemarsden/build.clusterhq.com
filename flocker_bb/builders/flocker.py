@@ -461,12 +461,22 @@ def makeHomebrewRecipeCreationFactory():
         masterdest=resultPath(sdist_master)
     ))
 
-    # Run admin/homebrew.py with BuildBot sdist URL as argument
+    base_url = buildbotURL
+    if base_url[-1] == '/':
+        # Cut off trailing / so it can join to resultURL
+        base_url = base_url[:-1]
+
     dist_url = Interpolate(
         "%(kw:base_url)s%(kw:url)s",
-        base_url=buildbotURL,
+        base_url=base_url,
         url=resultURL(sdist_master),
     )
+    recipe_url = Interpolate(
+        "%(kw:base_url)s%(kw:url)s",
+        base_url=base_url,
+        url=resultURL('homebrew/FlockerDev.rb'),
+    )
+
     factory.addStep(ShellCommand(
         name='make-homebrew-recipe',
         description=["building", "recipe"],
@@ -489,7 +499,7 @@ def makeHomebrewRecipeCreationFactory():
         name='trigger-homebrew-test',
         schedulerNames=['trigger/homebrew-created'],
         set_properties={
-            'master_recipe': 'homebrew/FlockerDev.rb'
+            'master_recipe': recipe_url
             },
         waitForFinish=False,
         ))
@@ -508,7 +518,7 @@ def makeHomebrewRecipeTestFactory():
     ))
 
     # Run testbrew script
-    recipe_url = resultURL(Property('master_recipe'))
+    recipe_url = Property('master_recipe')
     factory.addStep(ShellCommand(
         name='run-homebrew-test',
         description=["running", "recipe"],
