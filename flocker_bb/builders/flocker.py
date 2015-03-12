@@ -455,9 +455,8 @@ def makeHomebrewRecipeCreationFactory():
             ],
         haltOnFailure=True))
     factory.addStep(FileUpload(
-        slavesrc=Interpolate('/flocker/dist/Flocker-%(prop:version)s.tar.gz'),
-        masterdest=Interpolate(
-            '~/public_html/flocker/dist/Flocker-%(prop:version)s.tar.gz')
+        slavesrc=Interpolate('dist/Flocker-%(prop:version)s.tar.gz'),
+        masterdest=resultPath('homebrew')
     ))
 
     # Run admin/homebrew.py with BuildBot sdist URL as argument
