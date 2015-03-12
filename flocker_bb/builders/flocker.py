@@ -455,24 +455,25 @@ def makeHomebrewRecipeCreationFactory():
             ],
         haltOnFailure=True))
     factory.addStep(FileUpload(
-        slavesrc=Interpolate('/flocker/dist/Flocker-%(prop:version)s.tar.gz'),
-        masterdest=Interpolate(
-            '~/public_html/flocker/dist/Flocker-%(prop:version)s.tar.gz')
+        slavesrc=Interpolate('dist/Flocker-%(prop:version)s.tar.gz'),
+        masterdest=resultPath('homebrew/Flocker-%(prop:version)s.tar.gz')
     ))
 
     # Run admin/homebrew.py with BuildBot sdist URL as argument
     dist_url = Interpolate(
-        "%(kw:base_url)s%(kw:url)s/Flocker-%(prop:version)s.rb",
+        "%(kw:base_url)s%(kw:url)s",
         base_url=buildbotURL,
-        url=resultURL('homebrew'),
+        url=resultURL('homebrew/Flocker-%(prop:version)s.rb'),
     )
     factory.addStep(ShellCommand(
         name='make-homebrew-recipe',
         description=["building", "recipe"],
         descriptionDone=["build", "recipe"],
         command=[
-            "admin/make-homebrew-recipe", "--flocker-version", "Dev",
-            "--sdist", dist_url, "--output-file", "FlockerDev.rb"],
+            virtualenvBinary('python'), "-m", "admin.homebrew",
+            "--flocker-version", "Dev",
+            "--sdist", dist_url,
+            "--output-file", "FlockerDev.rb"],
         haltOnFailure=True))
 
     # Upload new .rb file to BuildBot master
