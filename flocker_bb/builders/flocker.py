@@ -454,31 +454,44 @@ def makeHomebrewRecipeCreationFactory():
             "setup.py", "sdist",
             ],
         haltOnFailure=True))
+
+    sdist_master = Interpolate('homebrew/Flocker-%(prop:version)s.tar.gz')
     factory.addStep(FileUpload(
-        slavesrc=Interpolate('/flocker/dist/Flocker-%(prop:version)s.tar.gz'),
-        masterdest=Interpolate(
-            '~/public_html/flocker/dist/Flocker-%(prop:version)s.tar.gz')
+        slavesrc=Interpolate('dist/Flocker-%(prop:version)s.tar.gz'),
+        masterdest=resultPath(sdist_master)
     ))
 
-    # Run admin/homebrew.py with BuildBot sdist URL as argument
+    base_url = buildbotURL
+    if base_url[-1] == '/':
+        # Cut off trailing / so it can join to resultURL
+        base_url = base_url[:-1]
+
     dist_url = Interpolate(
-        "%(kw:base_url)s%(kw:url)s/Flocker-%(prop:version)s.rb",
-        base_url=buildbotURL,
-        url=resultURL('homebrew'),
+        "%(kw:base_url)s%(kw:url)s",
+        base_url=base_url,
+        url=resultURL(sdist_master),
     )
+    recipe_url = Interpolate(
+        "%(kw:base_url)s%(kw:url)s",
+        base_url=base_url,
+        url=resultURL('homebrew/FlockerDev.rb'),
+    )
+
     factory.addStep(ShellCommand(
         name='make-homebrew-recipe',
         description=["building", "recipe"],
         descriptionDone=["build", "recipe"],
         command=[
-            "admin/make-homebrew-recipe", "--flocker-version", "Dev",
-            "--sdist", dist_url, "--output-file", "FlockerDev.rb"],
+            virtualenvBinary('python'), "-m", "admin.homebrew",
+            "--flocker-version", "Dev",
+            "--sdist", dist_url,
+            "--output-file", "FlockerDev.rb"],
         haltOnFailure=True))
 
     # Upload new .rb file to BuildBot master
     factory.addStep(FileUpload(
         slavesrc="FlockerDev.rb",
-        masterdest=resultPath('homebrew')
+        masterdest=resultPath('homebrew/FlockerDev.rb')
     ))
 
     # Trigger the homebrew-test build
@@ -486,7 +499,7 @@ def makeHomebrewRecipeCreationFactory():
         name='trigger-homebrew-test',
         schedulerNames=['trigger/homebrew-created'],
         set_properties={
-            'master_recipe': Interpolate("~/Flocker%(prop:buildnumber)s.rb")
+            'master_recipe': recipe_url
             },
         waitForFinish=False,
         ))
@@ -505,7 +518,7 @@ def makeHomebrewRecipeTestFactory():
     ))
 
     # Run testbrew script
-    recipe_url = resultURL(Property('master_recipe'))
+    recipe_url = Property('master_recipe')
     factory.addStep(ShellCommand(
         name='run-homebrew-test',
         description=["running", "recipe"],
