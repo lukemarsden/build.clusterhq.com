@@ -504,13 +504,7 @@ def makeHomebrewRecipeCreationFactory():
 
 def makeHomebrewRecipeTestFactory():
     factory = getFlockerFactory(python="python2.7")
-    factory.addStep(SetPropertyFromCommand(
-        command=["python", "setup.py", "--version"],
-        name='check-version',
-        description=['checking', 'version'],
-        descriptionDone=['checking', 'version'],
-        property='version'
-    ))
+    factory.addSteps(installDependencies())
 
     # Run testbrew script
     recipe_url = Property('master_recipe')
