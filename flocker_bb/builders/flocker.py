@@ -459,7 +459,7 @@ def makeHomebrewRecipeCreationFactory():
         url=resultURL('homebrew'),
         file=sdist_file
     )
-    recipe_file = 'FlockerDev.rb'
+    recipe_file = 'Flockerdev.rb'
     recipe_path = Interpolate(
         '%(kw:path)s/%(kw:file)s',
         path=resultPath('homebrew'),
@@ -496,15 +496,15 @@ def makeHomebrewRecipeCreationFactory():
         descriptionDone=["build", "recipe"],
         command=[
             virtualenvBinary('python'), "-m", "admin.homebrew",
-            "--flocker-version", "Dev",
+            "--flocker-version", "dev",
             "--sdist", sdist_url,
-            "--output-file", "FlockerDev.rb"],
+            "--output-file", "Flockerdev.rb"],
         haltOnFailure=True))
 
     # Upload new .rb file to BuildBot master
     factory.addStep(FileUpload(
         name='upload-homebrew-recipe',
-        slavesrc="FlockerDev.rb",
+        slavesrc="Flockerdev.rb",
         masterdest=recipe_path
     ))
 
