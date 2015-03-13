@@ -445,6 +445,33 @@ def makeHomebrewRecipeCreationFactory():
         property='version'
     ))
     factory.addSteps(installDependencies())
+
+    # Create suitable names for files hosted on Buildbot master.
+
+    sdist_file = 'Flocker-sdist.tar.gz'
+    sdist_path = Interpolate(
+        '%(kw:path)s/%(kw:file)s',
+        path=resultPath('homebrew'),
+        file=sdist_file)
+    sdist_url = Interpolate(
+        "%(kw:base_url)s%(kw:url)s/%(kw:file)s",
+        base_url=buildbotURL,
+        url=resultURL('homebrew'),
+        file=sdist_file
+    )
+    recipe_file = 'FlockerDev.rb'
+    recipe_path = Interpolate(
+        '%(kw:path)s/%(kw:file)s',
+        path=resultPath('homebrew'),
+        file=recipe_file)
+    recipe_url = Interpolate(
+        "%(kw:base_url)s%(kw:url)s/%(kw:file)s",
+        base_url=buildbotURL,
+        url=resultURL('homebrew'),
+        file=recipe_file
+    )
+
+    # Build source distribution
     factory.addStep(ShellCommand(
         name='build-sdist',
         description=["building", "sdist"],
@@ -455,24 +482,14 @@ def makeHomebrewRecipeCreationFactory():
             ],
         haltOnFailure=True))
 
-    sdist_master = Interpolate('homebrew/Flocker-%(prop:version)s.tar.gz')
+    # Upload source distribution to master
     factory.addStep(FileUpload(
         name='upload-sdist',
         slavesrc=Interpolate('dist/Flocker-%(prop:version)s.tar.gz'),
-        masterdest=resultPath(sdist_master)
+        masterdest=sdist_path
     ))
 
-    dist_url = Interpolate(
-        "%(kw:base_url)s%(kw:url)s",
-        base_url=buildbotURL,
-        url=resultURL(sdist_master),
-    )
-    recipe_url = Interpolate(
-        "%(kw:base_url)s%(kw:url)s",
-        base_url=buildbotURL,
-        url=resultURL('homebrew/FlockerDev.rb'),
-    )
-
+    # Build Homebrew recipe from source distribution URL
     factory.addStep(ShellCommand(
         name='make-homebrew-recipe',
         description=["building", "recipe"],
@@ -480,7 +497,7 @@ def makeHomebrewRecipeCreationFactory():
         command=[
             virtualenvBinary('python'), "-m", "admin.homebrew",
             "--flocker-version", "Dev",
-            "--sdist", dist_url,
+            "--sdist", sdist_url,
             "--output-file", "FlockerDev.rb"],
         haltOnFailure=True))
 
@@ -488,7 +505,7 @@ def makeHomebrewRecipeCreationFactory():
     factory.addStep(FileUpload(
         name='upload-homebrew-recipe',
         slavesrc="FlockerDev.rb",
-        masterdest=resultPath('homebrew/FlockerDev.rb')
+        masterdest=recipe_path
     ))
 
     # Trigger the homebrew-test build
