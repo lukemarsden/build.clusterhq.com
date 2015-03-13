@@ -454,7 +454,7 @@ def makeHomebrewRecipeCreationFactory():
         path=resultPath('homebrew'),
         file=sdist_file)
     sdist_url = Interpolate(
-        "%(kw:base_url)s%(kw:url)s%(kw:file)s",
+        "%(kw:base_url)s%(kw:url)s/%(kw:file)s",
         base_url=buildbotURL,
         url=resultURL('homebrew'),
         file=sdist_file
@@ -465,7 +465,7 @@ def makeHomebrewRecipeCreationFactory():
         path=resultPath('homebrew'),
         file=recipe_file)
     recipe_url = Interpolate(
-        "%(kw:base_url)s%(kw:url)s%(kw:file)s",
+        "%(kw:base_url)s%(kw:url)s/%(kw:file)s",
         base_url=buildbotURL,
         url=resultURL('homebrew'),
         file=recipe_file
@@ -489,6 +489,7 @@ def makeHomebrewRecipeCreationFactory():
         masterdest=sdist_path
     ))
 
+    # Build Homebrew recipe from source distribution URL
     factory.addStep(ShellCommand(
         name='make-homebrew-recipe',
         description=["building", "recipe"],
