@@ -445,17 +445,10 @@ def makeHomebrewRecipeCreationFactory():
         property='version'
     ))
     factory.addSteps(installDependencies())
-    factory.addStep(ShellCommand(
-        name='build-sdist',
-        description=["building", "sdist"],
-        descriptionDone=["build", "sdist"],
-        command=[
-            virtualenvBinary('python'),
-            "setup.py", "sdist",
-            ],
-        haltOnFailure=True))
 
-    sdist_file = 'Flocker-%(prop:version)s.tar.gz'
+    # Create suitable names for files hosted on Buildbot master.
+
+    sdist_file = 'Flocker-sdist.tar.gz'
     sdist_path = Interpolate(
         '%(kw:path)s/%(kw:file)s',
         path=resultPath('homebrew'),
@@ -478,6 +471,18 @@ def makeHomebrewRecipeCreationFactory():
         file=recipe_file
     )
 
+    # Build source distribution
+    factory.addStep(ShellCommand(
+        name='build-sdist',
+        description=["building", "sdist"],
+        descriptionDone=["build", "sdist"],
+        command=[
+            virtualenvBinary('python'),
+            "setup.py", "sdist",
+            ],
+        haltOnFailure=True))
+
+    # Upload source distribution to master
     factory.addStep(FileUpload(
         name='upload-sdist',
         slavesrc=Interpolate('dist/Flocker-%(prop:version)s.tar.gz'),
