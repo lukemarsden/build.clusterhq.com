@@ -461,19 +461,14 @@ def makeHomebrewRecipeCreationFactory():
         masterdest=resultPath(sdist_master)
     ))
 
-    base_url = buildbotURL
-    if base_url[-1] == '/':
-        # Cut off trailing / so it can join to resultURL
-        base_url = base_url[:-1]
-
     dist_url = Interpolate(
         "%(kw:base_url)s%(kw:url)s",
-        base_url=base_url,
+        base_url=buildbotURL,
         url=resultURL(sdist_master),
     )
     recipe_url = Interpolate(
         "%(kw:base_url)s%(kw:url)s",
-        base_url=base_url,
+        base_url=buildbotURL,
         url=resultURL('homebrew/FlockerDev.rb'),
     )
 
