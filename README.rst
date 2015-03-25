@@ -57,12 +57,9 @@ Staging changes
 ---------------
 
 Buildbot changes can be tested on a staging machine.
-The Docker registry will automatically build an image based on the ``staging`` branch, whenever it is updated.
+The docker registry will automatically build an image based on the staging branch, whenever it is updated.
 
-Create a Fedora 20 instance on EC2 and note the IP of this instance.  To start a
-suitable instance, you can run ``python start-aws.py`` if you have `boto` 
-installed and configured to access AWS.
-
+Create an Fedora 20 spot instance on EC2 and note the IP of this instance.
 In the following example the IP is 54.191.9.106.
 Set the Security Group of this instance to allow inbound traffic as shown below.
 
@@ -82,11 +79,11 @@ Add a buildmaster.docker_tag config option, with the value ``staging``.
 
 Follow the "Deploying changes" setup but there is no need to check for running builds or make an announcement on Zulip.
 
-To start a Buildbot master on this machine run::
+To start a Buildbot slave on this machine run::
 
    $ fab start:staging.yml
 
-To update a master on this machine, run::
+To update a slave on this machine, run::
 
    $ fab update:staging.yml
 
@@ -154,20 +151,6 @@ To configure this machine run::
 The tests do not run with root or administrator privileges.
 
 Where ${USERNAME} is a user on the OS X machine, and ${PASSWORD} is the password in ``slaves.osx.passwords`` from the ``config.yml`` used to deploy the BuildBot master at ${MASTER}.
-
-If you do not have root privileges, run the following commands to run a build slave:
-
-.. code:: shell
-
-   # Set MASTER and PASSWORD as above
-   git clone https://github.com/ClusterHQ/build.clusterhq.com.git
-   cd build.clusterhq.com/
-   curl -O https://bootstrap.pypa.io/get-pip.py
-   python get-pip.py --user
-   ~/Library/Python/2.7/bin/pip install --user buildbot-slave==0.8.10 virtualenv==12.0.7
-   ~/Library/Python/2.7/bin/buildslave create-slave ~/flocker-osx "${MASTER}" osx-0 "${PASSWORD}"
-   export PATH=$HOME/Library/python/2.7/bin:$PATH
-   twistd --nodaemon -y flocker-osx/buildbot.tac
 
 Monitoring
 ----------
