@@ -1,10 +1,9 @@
-import random
-from itertools import groupby
-from collections import Counter
-from buildbot.steps.shell import ShellCommand, SetPropertyFromCommand
+from buildbot.steps.shell import (
+    ShellCommand, SetProperty, SetPropertyFromCommand)
 from buildbot.steps.python_twisted import Trial
 from buildbot.steps.python import Sphinx
-from buildbot.steps.transfer import DirectoryUpload, StringDownload
+from buildbot.steps.transfer import (
+    DirectoryUpload, FileUpload, StringDownload)
 from buildbot.steps.master import MasterShellCommand
 from buildbot.steps.source.git import Git
 from buildbot.process.properties import Interpolate, Property
@@ -21,6 +20,7 @@ from ..steps import (
     pip,
     isMasterBranch, isReleaseBranch,
     resultPath, resultURL,
+    flockerBranch, flockerRevision,
     )
 
 # This is where temporary files associated with a build will be dumped.
@@ -366,7 +366,7 @@ def createRepository(distribution, repository_path):
             description=["building", "repo", "metadata"],
             descriptionDone=["build", "repo", "metadata"],
             # FIXME: Don't use shell here.
-            command="dpkg-scanpackages . | gzip > Packages.gz",
+            command="dpkg-scanpackages --multiversion . | gzip > Packages.gz",
             path=repository_path,
             haltOnFailure=True))
     else:
@@ -433,13 +433,152 @@ def makeOmnibusFactory(distribution):
     return factory
 
 
+def setRecipeVersionProperty():
+    """Return steps to set a property for the Homebrew recipe version.
+
+    This needs to be done carefully, as Homebrew mangles the filename
+    and classname in a tricky way, especially for more complex version
+    numbering.  Here, we use the Flocker version only if it is a release
+    version, otherwise we use the Git SHA.
+    """
+
+    return [
+        SetProperty(
+            property='recipe_version', value=flockerRevision),
+
+        SetProperty(
+            property='recipe_version', value=Property('version'),
+            doStepIf=isReleaseBranch('flocker'))
+        ]
+
+
+def makeHomebrewRecipeCreationFactory():
+    """Create the Homebrew recipe from a source distribution.
+
+    This is separate to the recipe testing, to allow it to be done on a
+    non-Mac platform.  Once complete, this triggers the Mac testing.
+    """
+    factory = getFlockerFactory(python="python2.7")
+    factory.addStep(SetPropertyFromCommand(
+        command=["python", "setup.py", "--version"],
+        name='check-version',
+        description=['checking', 'version'],
+        descriptionDone=['check', 'version'],
+        property='version'
+    ))
+    factory.addSteps(installDependencies())
+
+    # Create suitable names for files hosted on Buildbot master.
+
+    sdist_file = Interpolate('Flocker-%(prop:version)s.tar.gz')
+    sdist_path = resultPath('python',
+                            discriminator=flockerBranch,
+                            filename=sdist_file)
+    sdist_url = resultURL('python',
+                          isAbsolute=True,
+                          discriminator=flockerBranch,
+                          filename=sdist_file)
+
+    factory.addSteps(setRecipeVersionProperty())
+    recipe_file = Interpolate('Flocker%(prop:recipe_version)s.rb')
+    recipe_path = resultPath(
+        'homebrew', discriminator=flockerBranch, filename=recipe_file)
+
+    # Build source distribution
+    factory.addStep(ShellCommand(
+        name='build-sdist',
+        description=["building", "sdist"],
+        descriptionDone=["build", "sdist"],
+        command=[
+            virtualenvBinary('python'),
+            "setup.py", "sdist",
+            ],
+        haltOnFailure=True))
+
+    # Upload source distribution to master
+    factory.addStep(FileUpload(
+        name='upload-sdist',
+        slavesrc=Interpolate('dist/Flocker-%(prop:version)s.tar.gz'),
+        masterdest=sdist_path
+    ))
+
+    # Build Homebrew recipe from source distribution URL
+    factory.addStep(ShellCommand(
+        name='make-homebrew-recipe',
+        description=["building", "recipe"],
+        descriptionDone=["build", "recipe"],
+        command=[
+            virtualenvBinary('python'), "-m", "admin.homebrew",
+            "--flocker-version", Property('recipe_version'),
+            "--sdist", sdist_url,
+            "--output-file", recipe_file],
+        haltOnFailure=True))
+
+    # Upload new .rb file to BuildBot master
+    factory.addStep(FileUpload(
+        name='upload-homebrew-recipe',
+        slavesrc=recipe_file,
+        masterdest=recipe_path
+    ))
+
+    # Trigger the homebrew-test build
+    factory.addStep(Trigger(
+        name='trigger/created-homebrew',
+        schedulerNames=['trigger/created-homebrew'],
+        set_properties={
+            # lint_revision is the commit that was merged against,
+            # if we merged forward, so have the triggered build
+            # merge against it as well.
+            'merge_target': Property('lint_revision')
+        },
+        updateSourceStamp=True,
+        waitForFinish=False,
+        ))
+
+    return factory
+
+
+def makeHomebrewRecipeTestFactory():
+    """Test the Homebrew recipe on an OS X system."""
+
+    factory = getFlockerFactory(python="python2.7")
+    factory.addSteps(installDependencies())
+
+    factory.addSteps(setRecipeVersionProperty())
+    recipe_file = Interpolate('Flocker%(prop:recipe_version)s.rb')
+
+    # Run testbrew script
+    recipe_url = resultURL('homebrew',
+                           isAbsolute=True,
+                           discriminator=flockerBranch,
+                           filename=recipe_file)
+    factory.addStep(ShellCommand(
+        name='run-homebrew-test',
+        description=["running", "homebrew", "test"],
+        descriptionDone=["run", "homebrew", "test"],
+        command=[
+            virtualenvBinary('python'),
+            b"admin/test-brew-recipe",
+            b"--vmhost", b"192.168.169.100",
+            b"--vmuser", b"ClusterHQVM",
+            b"--vmpath", b"/Users/buildslave/Documents/Virtual Machines.localized/OS X 10.10.vmwarevm/OS X 10.10.vmx",  # noqa
+            b"--vmsnapshot", b"homebrew-clean",
+            recipe_url
+            ],
+        haltOnFailure=True))
+
+    return factory
+
+
 from buildbot.config import BuilderConfig
 from buildbot.schedulers.basic import AnyBranchScheduler
 from buildbot.schedulers.forcesched import (
     CodebaseParameter, StringParameter, ForceScheduler, FixedParameter)
+from buildbot.schedulers.triggerable import Triggerable
 from buildbot.locks import SlaveLock
 
 from ..steps import report_expected_failures_parameter
+from ..steps import idleSlave
 
 # A lock to prevent multiple functional tests running at the same time
 functionalLock = SlaveLock('functional-tests')
@@ -449,29 +588,6 @@ OMNIBUS_DISTRIBUTIONS = [
     'ubuntu-14.04',
     'centos-7',
 ]
-
-
-def idleSlave(builder, slavebuilders):
-    # Count the builds on each slave
-    builds = Counter([
-        slavebuilder
-        for slavebuilder in slavebuilders
-        for sb in slavebuilder.slave.slavebuilders.values()
-        if sb.isBusy()
-    ])
-
-    if not builds:
-        # If there are no builds, then everything is idle.
-        idle = slavebuilders
-    else:
-        min_builds = min(builds.values())
-        idle = [
-            slavebuilder
-            for slavebuilder in slavebuilders
-            if builds[slavebuilder] == min_builds
-        ]
-    if idle:
-        return random.choice(idle)
 
 
 def getBuilders(slavenames):
@@ -533,6 +649,18 @@ def getBuilders(slavenames):
                       category='flocker',
                       factory=makeAdminFactory(),
                       nextSlave=idleSlave),
+        BuilderConfig(name='flocker/homebrew/create',
+                      builddir='flocker-homebrew-create',
+                      slavenames=slavenames['fedora'],
+                      category='flocker',
+                      factory=makeHomebrewRecipeCreationFactory(),
+                      nextSlave=idleSlave),
+        BuilderConfig(name='flocker/homebrew/test',
+                      builddir='flocker-homebrew-test',
+                      slavenames=slavenames['osx'],
+                      category='flocker',
+                      factory=makeHomebrewRecipeTestFactory(),
+                      nextSlave=idleSlave),
         ]
     for distribution in OMNIBUS_DISTRIBUTIONS:
         builders.append(
@@ -545,15 +673,6 @@ def getBuilders(slavenames):
                 ),
                 nextSlave=idleSlave,
                 ))
-
-    # Distribute builders that have locks accross slaves.
-    # This assumes there is only a single type of lock.
-    locked_builders = sorted([b for b in builders if b.locks],
-                             key=lambda b: b.slavenames)
-    for slavenames, slave_builders in groupby(locked_builders,
-                                              key=lambda b: b.slavenames):
-        for builder, slavename in zip(slave_builders, slavenames):
-            builder.slavenames = [slavename]
 
     return builders
 
@@ -568,6 +687,7 @@ BUILDERS = [
     'flocker-docs',
     'flocker-zfs-head',
     'flocker-admin',
+    'flocker/homebrew/create',
 ] + [
     'flocker-omnibus-%s' % (dist,) for dist in OMNIBUS_DISTRIBUTIONS
 ]
@@ -599,4 +719,11 @@ def getSchedulers():
             ],
             builderNames=BUILDERS,
             ),
-        ]
+        Triggerable(
+            name='trigger/created-homebrew',
+            builderNames=['flocker/homebrew/test'],
+            codebases={
+                "flocker": {"repository": GITHUB + b"/flocker"},
+            },
+        ),
+    ]

@@ -1,3 +1,6 @@
+import random
+from collections import Counter
+
 from twisted.internet import defer
 from twisted.python import log
 from twisted.python.filepath import FilePath
@@ -35,23 +38,44 @@ report_expected_failures_parameter = BooleanParameter(
 )
 
 
-def _result(kind, prefix, discriminator=buildNumber):
+@renderer
+def buildbotURL(build):
+    return build.getBuild().build_status.master.status.getBuildbotURL()
+
+
+@renderer
+def flockerRevision(build):
+    """
+    Get the SHA-1 of the checked-out version of flocker.
+    """
+    return build.getProperty('got_revision', {}).get('flocker')
+
+
+def _result(kind, prefix, discriminator=buildNumber, filename=None):
     """
     Build a path to results.
     """
+    parts = [prefix, kind, flockerBranch, discriminator]
+    if filename is not None:
+        parts.append(filename)
+
     @renderer
     def render(build):
-        d = defer.gatherResults(
-            map(build.render,
-                [prefix, kind, flockerBranch, discriminator]))
-        d.addCallback(
-            lambda args:
-            reduce(FilePath.preauthChild, args[1:], FilePath(args[0])).path)
+        d = defer.gatherResults(map(build.render, parts))
+        d.addCallback(lambda parts: path.join(*parts))
         return d
     return render
 
-resultPath = partial(_result, prefix="private_html")
-resultURL = partial(_result, prefix="/results/")
+resultPath = partial(_result, prefix=path.abspath("private_html"))
+
+
+def resultURL(kind, isAbsolute=False, **kwargs):
+    if isAbsolute:
+        # buildbotURL has a trailing slash, so don't double it here.
+        prefix = Interpolate("%(kw:base)sresults/", base=buildbotURL)
+    else:
+        prefix = '/results/'
+    return _result(kind=kind, prefix=prefix, **kwargs)
 
 
 def buildVirtualEnv(python, useSystem=False):
@@ -101,11 +125,6 @@ def getFactory(codebase, useSubmodules=True, mergeForward=False):
                          name="update-git-submodules"))
 
     return factory
-
-
-@renderer
-def buildbotURL(build):
-    return build.getBuild().build_status.master.status.getBuildbotURL()
 
 
 def virtualenvBinary(command):
@@ -352,3 +371,39 @@ def isMasterBranch(codebase):
 
 def isReleaseBranch(codebase):
     return isBranch(codebase, MergeForward._isRelease)
+
+
+def idleSlave(builder, slavebuilders):
+    """
+    Return a slave that has the least number of running builds on it.
+    """
+    # Count the builds on each slave
+    builds = Counter([
+        slavebuilder
+        for slavebuilder in slavebuilders
+        for sb in slavebuilder.slave.slavebuilders.values()
+        if sb.isBusy()
+    ])
+
+    if not builds:
+        # If there are no builds, then everything is idle.
+        idle = slavebuilders
+    else:
+        min_builds = min(builds.values())
+        idle = [
+            slavebuilder
+            for slavebuilder in slavebuilders
+            if builds[slavebuilder] == min_builds
+        ]
+    if idle:
+        return random.choice(idle)
+
+
+def slave_environ(var):
+    """
+    Render a environment variable from the slave.
+    """
+    @renderer
+    def render(properties):
+        return properties.getBuild().slavebuilder.slave.slave_environ.get(var)
+    return render

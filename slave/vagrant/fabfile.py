@@ -30,14 +30,8 @@ def configure_gsutil(config):
     put(StringIO(config['certificate']), '/home/buildslave/google.p12')
 
 
-def configure_ssh(ssh_key):
-    sudo('mkdir -p ~/.ssh', user='buildslave')
-    put(StringIO(ssh_key), '/home/buildslave/.ssh/id_rsa', mode=0600)
-    run('chown -R buildslave /home/buildslave/.ssh')
-
-
-def configure_acceptance(config):
-    put(StringIO(yaml.safe_dump(config)),
+def configure_acceptance():
+    put(StringIO(yaml.safe_dump({'metadata': {'creator': 'buildbot'}})),
         '/home/buildslave/acceptance.yml')
 
 
@@ -83,8 +77,7 @@ yum install -y https://kojipkgs.fedoraproject.org//packages/kernel/${KV}/${SV}/$
 
     sudo("vagrant plugin install vagrant-reload vagrant-vbguest",
          user='buildslave')
-    configure_ssh(ssh_key=config['ssh-key'])
-    configure_acceptance(config=config['acceptance'])
+    configure_acceptance()
     configure_gsutil(config=config['google-certificate'])
 
     put(FilePath(__file__).sibling('fedora-vagrant-slave.service').path,
@@ -97,6 +90,4 @@ yum install -y https://kojipkgs.fedoraproject.org//packages/kernel/${KV}/${SV}/$
 @task
 def update_config():
     config = get_vagrant_config()
-    configure_ssh(ssh_key=config['ssh-key'])
-    configure_acceptance(config=config['acceptance'])
     configure_gsutil(config=config['google-certificate'])

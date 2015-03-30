@@ -11,7 +11,8 @@ from ..steps import (
     buildbotURL,
     MasterWriteFile, asJSON,
     flockerBranch,
-    resultPath, resultURL
+    resultPath, resultURL,
+    slave_environ,
     )
 
 # FIXME
@@ -203,8 +204,8 @@ def run_acceptance_tests(configuration):
             '--provider', configuration.provider,
             '--branch', flockerBranch,
             '--build-server', buildbotURL,
-            # FIXME: This path shouldn't be hard-coded here.
-            '--config-file', '/home/buildslave/acceptance.yml',
+            '--config-file', Interpolate("%(kw:home)s/acceptance.yml",
+                                         home=slave_environ("HOME")),
         ] + [
             ['--variant', variant]
             for variant in configuration.variants
@@ -291,10 +292,7 @@ from buildbot.schedulers.triggerable import Triggerable
 from buildbot.changes.filter import ChangeFilter
 
 
-def idleSlave(builder, slaves):
-    idle = [slave for slave in slaves if slave.isAvailable()]
-    if idle:
-        return idle[0]
+from ..steps import idleSlave
 
 
 # Dictionary mapping providers for acceptence testing to a list of
@@ -325,6 +323,13 @@ class AcceptanceConfiguration(object):
     @property
     def builder_directory(self):
         return self.builder_name.replace('/', '-')
+
+    @property
+    def slave_class(self):
+        if self.provider == 'vagrant':
+            return 'fedora-vagrant'
+        else:
+            return 'centos-7'
 
 
 ACCEPTEANCE_CONFIGURATIONS = [
@@ -380,7 +385,7 @@ def getBuilders(slavenames):
         builders.append(BuilderConfig(
             name=configuration.builder_name,
             builddir=configuration.builder_directory,
-            slavenames=slavenames['fedora-vagrant'],
+            slavenames=slavenames[configuration.slave_class],
             category='flocker',
             factory=run_acceptance_tests(configuration),
             nextSlave=idleSlave))

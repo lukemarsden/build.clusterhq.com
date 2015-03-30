@@ -221,6 +221,10 @@ For testing purposes, or if you do not have root privileges, run the following c
    export PATH=$HOME/Library/python/2.7/bin:$PATH
    twistd --nodaemon -y flocker-osx/buildbot.tac
 
+There is a VMware Fusion OSX VM configured, for running homebrew installation tests.
+It is configured with a ``nat`` network, with a static IP address,
+and the buildslave user has a password-less ssh-key that can log in to it.
+
 Monitoring
 ----------
 

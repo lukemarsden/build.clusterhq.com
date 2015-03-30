@@ -69,6 +69,10 @@ for base, slaveConfig in privateData['slaves'].items():
                         "password": password,
                         'buildmaster_host': privateData['buildmaster']['host'],
                         'buildmaster_port': c['slavePortnum'],
+                        'acceptance.yml':
+                            privateData['acceptance'].get('config', ''),
+                        'acceptance-ssh-key':
+                            privateData['acceptance'].get('ssh-key', ''),
                         },
                     keepalive_interval=60,
                     tags={
@@ -127,7 +131,7 @@ addBuilderModule(maint)
 # pushed to these targets. buildbot/status/*.py has a variety to choose from,
 # including web pages, email senders, and IRC bots.
 
-failing_builders = frozenset(privateData['failing_builders'])
+failing_builders = frozenset(privateData.get('failing_builders', ()))
 
 c['status'] = []
 
@@ -189,8 +193,8 @@ if 'zulip' in privateData:
 # installation's html.WebStatus home page (linked to the
 # 'titleURL') and is embedded in the title of the waterfall HTML page.
 
-c['title'] = "ClusterHQ !!!!!!!!!!!!!111111111111"
-c['titleURL'] = "https://www.clusterhq.com/"
+c['title'] = "ClusterHQ"
+c['titleURL'] = "http://www.clusterhq.com/"
 
 # the 'buildbotURL' string should point to the location where the buildbot's
 # internal web server (usually the html.WebStatus page) is visible. This
