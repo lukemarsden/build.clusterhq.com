@@ -1,10 +1,9 @@
-from buildbot.steps.shell import (
-    ShellCommand, SetProperty, SetPropertyFromCommand)
+from buildbot.steps.shell import ShellCommand, SetPropertyFromCommand
 from buildbot.steps.python_twisted import Trial
 from buildbot.steps.python import Sphinx
 from buildbot.steps.transfer import (
     DirectoryUpload, FileUpload, StringDownload)
-from buildbot.steps.master import MasterShellCommand
+from buildbot.steps.master import MasterShellCommand, SetProperty
 from buildbot.steps.source.git import Git
 from buildbot.process.properties import Interpolate, Property
 from buildbot.steps.trigger import Trigger
