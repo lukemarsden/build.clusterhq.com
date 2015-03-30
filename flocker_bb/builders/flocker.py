@@ -553,16 +553,20 @@ def makeHomebrewRecipeTestFactory():
     factory.addSteps(setRecipeVersionProperty())
     recipe_file = Interpolate('Flocker%(prop:recipe_version)s.rb')
 
-    # Run testbrew script
     recipe_url = resultURL('homebrew',
                            isAbsolute=True,
                            discriminator=flockerBranch,
                            filename=recipe_file)
+
+    # Run VM from our home directory. This allows the staging branch to
+    # be run separately from the master branch.
     factory.addStep(SetPropertiesFromEnv(
         name='set-home',
         description=["setting", "property", "HOME"],
         descriptionDone=["property", "HOME", "set"],
         variables=['HOME']))
+
+    # Run testbrew script
     factory.addStep(ShellCommand(
         name='run-homebrew-test',
         description=["running", "homebrew", "test"],
@@ -570,7 +574,8 @@ def makeHomebrewRecipeTestFactory():
         command=[
             virtualenvBinary('python'),
             b"admin/test-brew-recipe",
-            b"--vmhost", b"192.168.169.100",
+            # b"--vmhost", b"192.168.169.100",
+            b"--vmhost", b"10.0.126.88",
             b"--vmuser", b"ClusterHQVM",
             b"--vmpath",
             Interpolate(
