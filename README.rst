@@ -217,6 +217,7 @@ For testing purposes, or if you do not have root privileges, run the following c
    curl -O https://bootstrap.pypa.io/get-pip.py
    python get-pip.py --user
    ~/Library/Python/2.7/bin/pip install --user buildbot-slave virtualenv
+   rm -f flocker-osx/buildbot.tac
    ~/Library/Python/2.7/bin/buildslave create-slave ~/flocker-osx "${MASTER}" osx-0 "${PASSWORD}"
    export PATH=$HOME/Library/python/2.7/bin:$PATH
    twistd --nodaemon -y flocker-osx/buildbot.tac

@@ -4,6 +4,7 @@ from buildbot.steps.python import Sphinx
 from buildbot.steps.transfer import (
     DirectoryUpload, FileUpload, StringDownload)
 from buildbot.steps.master import MasterShellCommand, SetProperty
+from buildbot.steps.slave import SetPropertiesFromEnv
 from buildbot.steps.source.git import Git
 from buildbot.process.properties import Interpolate, Property
 from buildbot.steps.trigger import Trigger
@@ -443,9 +444,15 @@ def setRecipeVersionProperty():
 
     return [
         SetProperty(
+            name='set-recipe-version',
+            description=["setting", "recipe_version"],
+            descriptionDone=["property", "'recipe_version'", "set"],
             property='recipe_version', value=flockerRevision),
 
         SetProperty(
+            name='set-recipe-version-release',
+            description=["setting", "recipe_version"],
+            descriptionDone=["property", "'recipe_version'", "set"],
             property='recipe_version', value=Property('version'),
             doStepIf=isReleaseBranch('flocker'))
         ]
@@ -551,6 +558,11 @@ def makeHomebrewRecipeTestFactory():
                            isAbsolute=True,
                            discriminator=flockerBranch,
                            filename=recipe_file)
+    factory.addStep(SetPropertiesFromEnv(
+        name='set-home',
+        description=["setting", "property", "HOME"],
+        descriptionDone=["property", "HOME", "set"],
+        variables=['HOME']))
     factory.addStep(ShellCommand(
         name='run-homebrew-test',
         description=["running", "homebrew", "test"],
@@ -560,7 +572,10 @@ def makeHomebrewRecipeTestFactory():
             b"admin/test-brew-recipe",
             b"--vmhost", b"192.168.169.100",
             b"--vmuser", b"ClusterHQVM",
-            b"--vmpath", b"/Users/buildslave/Documents/Virtual Machines.localized/OS X 10.10.vmwarevm/OS X 10.10.vmx",  # noqa
+            b"--vmpath",
+            Interpolate(
+                b"%(prop:HOME)s/Documents/Virtual Machines.localized"
+                "/OS X 10.10.vmwarevm/OS X 10.10.vmx"),
             b"--vmsnapshot", b"homebrew-clean",
             recipe_url
             ],
