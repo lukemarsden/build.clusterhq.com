@@ -447,14 +447,16 @@ def setRecipeVersionProperty():
     return [
         SetProperty(
             name='set-recipe-version',
-            description=["setting", "recipe_version"],
-            descriptionDone=["property", "'recipe_version'", "set"],
+            description=['setting'],
+            descriptionDone=['set'],
+            descriptionSuffix=["'recipe_version'", "property"],
             property='recipe_version', value=flockerRevision),
 
         SetProperty(
             name='set-recipe-version-release',
-            description=["setting", "recipe_version"],
-            descriptionDone=["property", "'recipe_version'", "set"],
+            description=['setting'],
+            descriptionDone=['set'],
+            descriptionSuffix=["'recipe_version'", "property"],
             property='recipe_version', value=Property('version'),
             doStepIf=isReleaseBranch('flocker'))
         ]
@@ -571,11 +573,12 @@ def makeHomebrewRecipeTestFactory():
     # be run separately from the master branch.
     factory.addStep(SetPropertiesFromEnv(
         name='set-home',
-        description=["setting", "property", "HOME"],
-        descriptionDone=["property", "HOME", "set"],
+        description=['setting'],
+        descriptionDone=['set'],
+        descriptionSuffix=["'HOME'", "property"],
         variables=['HOME']))
 
-    # Gettig the VM IP address from VMWare is difficult when we don't
+    # Getting the VM IP address from VMWare is difficult when we don't
     # have a user password.  Currently, we just hardwire the two known
     # values: production (user buildslave) uses a VM with a fixed IP of
     # 192.168.169.100; staging (user ClusterHQ) uses a VM with DHCP IP
@@ -591,8 +594,9 @@ def makeHomebrewRecipeTestFactory():
     # Run testbrew script
     factory.addStep(ShellCommand(
         name='run-homebrew-test',
-        description=["running", "homebrew", "test"],
-        descriptionDone=["run", "homebrew", "test"],
+        description=["running"],
+        descriptionDone=["run"],
+        descriptionSuffix=["Homebrew", "test"],
         command=[
             virtualenvBinary('python'),
             b"admin/test-brew-recipe",
