@@ -447,14 +447,14 @@ def setRecipeVersionProperty():
     return [
         SetProperty(
             name='set-recipe-version',
-            description=["setting", "recipe_version"],
-            descriptionDone=["property", "'recipe_version'", "set"],
+            description=['setting', "'recipe_version'", "property"],
+            descriptionDone=['set', "'recipe_version'", "property"],
             property='recipe_version', value=flockerRevision),
 
         SetProperty(
             name='set-recipe-version-release',
-            description=["setting", "recipe_version"],
-            descriptionDone=["property", "'recipe_version'", "set"],
+            description=['setting', "'recipe_version'", "property"],
+            descriptionDone=['set', "'recipe_version'", "property"],
             property='recipe_version', value=Property('version'),
             doStepIf=isReleaseBranch('flocker'))
         ]
@@ -571,19 +571,32 @@ def makeHomebrewRecipeTestFactory():
     # be run separately from the master branch.
     factory.addStep(SetPropertiesFromEnv(
         name='set-home',
-        description=["setting", "property", "HOME"],
-        descriptionDone=["property", "HOME", "set"],
+        description=['setting', "'HOME'", "property"],
+        descriptionDone=['set', "'HOME'", "property"],
         variables=['HOME']))
+
+    # Getting the VM IP address from VMWare is difficult when we don't
+    # have a user password.  Currently, we just hardwire the two known
+    # values: production (user buildslave) uses a VM with a fixed IP of
+    # 192.168.169.100; staging (user ClusterHQ) uses a VM with DHCP IP
+    # of 10.0.126.88.  JIRA [FLOC-1623]
+    from flocker_bb import privateData
+    master_host = privateData['buildmaster']['host']
+    if master_host == 'build.clusterhq.com':
+        vm_host = b'192.168.169.100'
+    else:
+        # staging host
+        vm_host = b'10.0.126.88'
 
     # Run testbrew script
     factory.addStep(ShellCommand(
         name='run-homebrew-test',
-        description=["running", "homebrew", "test"],
-        descriptionDone=["run", "homebrew", "test"],
+        description=["running", "Homebrew", "test"],
+        descriptionDone=["run", "Homebrew", "test"],
         command=[
             virtualenvBinary('python'),
             b"admin/test-brew-recipe",
-            b"--vmhost", b"192.168.169.100",
+            b"--vmhost", vm_host,
             b"--vmuser", b"ClusterHQVM",
             b"--vmpath",
             Interpolate(
