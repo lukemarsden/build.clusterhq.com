@@ -447,16 +447,14 @@ def setRecipeVersionProperty():
     return [
         SetProperty(
             name='set-recipe-version',
-            description=['setting'],
-            descriptionDone=['set'],
-            descriptionSuffix=["'recipe_version'", "property"],
+            description=['setting', "'recipe_version'", "property"],
+            descriptionDone=['set', "'recipe_version'", "property"],
             property='recipe_version', value=flockerRevision),
 
         SetProperty(
             name='set-recipe-version-release',
-            description=['setting'],
-            descriptionDone=['set'],
-            descriptionSuffix=["'recipe_version'", "property"],
+            description=['setting', "'recipe_version'", "property"],
+            descriptionDone=['set', "'recipe_version'", "property"],
             property='recipe_version', value=Property('version'),
             doStepIf=isReleaseBranch('flocker'))
         ]
@@ -573,9 +571,8 @@ def makeHomebrewRecipeTestFactory():
     # be run separately from the master branch.
     factory.addStep(SetPropertiesFromEnv(
         name='set-home',
-        description=['setting'],
-        descriptionDone=['set'],
-        descriptionSuffix=["'HOME'", "property"],
+        description=['setting', "'HOME'", "property"],
+        descriptionDone=['set', "'HOME'", "property"],
         variables=['HOME']))
 
     # Getting the VM IP address from VMWare is difficult when we don't
@@ -594,9 +591,8 @@ def makeHomebrewRecipeTestFactory():
     # Run testbrew script
     factory.addStep(ShellCommand(
         name='run-homebrew-test',
-        description=["running"],
-        descriptionDone=["run"],
-        descriptionSuffix=["Homebrew", "test"],
+        description=["running", "Homebrew", "test"],
+        descriptionDone=["run", "Homebrew", "test"],
         command=[
             virtualenvBinary('python'),
             b"admin/test-brew-recipe",
