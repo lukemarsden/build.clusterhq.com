@@ -575,6 +575,19 @@ def makeHomebrewRecipeTestFactory():
         descriptionDone=["property", "HOME", "set"],
         variables=['HOME']))
 
+    # Getting the VM IP address from VMWare is difficult when we don't
+    # have a user password.  Currently, we just hardwire the two known
+    # values: production (user buildslave) uses a VM with a fixed IP of
+    # 192.168.169.100; staging (user ClusterHQ) uses a VM with DHCP IP
+    # of 10.0.126.88.  JIRA [FLOC-1623]
+    from flocker_bb import privateData
+    master_host = privateData['buildmaster']['host']
+    if master_host == 'build.clusterhq.com':
+        vm_host = b'192.168.169.100'
+    else:
+        # staging host
+        vm_host = b'10.0.126.88'
+
     # Run testbrew script
     factory.addStep(ShellCommand(
         name='run-homebrew-test',
@@ -583,8 +596,7 @@ def makeHomebrewRecipeTestFactory():
         command=[
             virtualenvBinary('python'),
             b"admin/test-brew-recipe",
-            # b"--vmhost", b"192.168.169.100",
-            b"--vmhost", b"10.0.126.88",
+            b"--vmhost", vm_host,
             b"--vmuser", b"ClusterHQVM",
             b"--vmpath",
             Interpolate(
