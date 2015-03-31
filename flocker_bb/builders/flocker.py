@@ -575,7 +575,7 @@ def makeHomebrewRecipeTestFactory():
         descriptionDone=["property", "HOME", "set"],
         variables=['HOME']))
 
-    # Getting the VM IP address from VMWare is difficult when we don't
+    # Gettig the VM IP address from VMWare is difficult when we don't
     # have a user password.  Currently, we just hardwire the two known
     # values: production (user buildslave) uses a VM with a fixed IP of
     # 192.168.169.100; staging (user ClusterHQ) uses a VM with DHCP IP
