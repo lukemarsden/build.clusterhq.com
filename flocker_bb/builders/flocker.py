@@ -440,6 +440,8 @@ def setRecipeVersionProperty():
     and classname in a tricky way, especially for more complex version
     numbering.  Here, we use the Flocker version only if it is a release
     version, otherwise we use the Git SHA.
+
+    Note, this requires that the property `version` has been created.
     """
 
     return [
@@ -548,6 +550,13 @@ def makeHomebrewRecipeTestFactory():
     """Test the Homebrew recipe on an OS X system."""
 
     factory = getFlockerFactory(python="python2.7")
+    factory.addStep(SetPropertyFromCommand(
+        command=["python", "setup.py", "--version"],
+        name='check-version',
+        description=['checking', 'version'],
+        descriptionDone=['check', 'version'],
+        property='version'
+    ))
     factory.addSteps(installDependencies())
 
     factory.addSteps(setRecipeVersionProperty())
