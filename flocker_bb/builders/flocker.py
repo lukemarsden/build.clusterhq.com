@@ -488,7 +488,7 @@ def makeHomebrewRecipeCreationFactory():
                           filename=sdist_file)
 
     factory.addSteps(setRecipeVersionProperty())
-    recipe_file = Interpolate('Flocker%(prop:recipe_version)s.rb')
+    recipe_file = Interpolate('flocker-%(prop:recipe_version)s.rb')
     recipe_path = resultPath(
         'homebrew', discriminator=flockerBranch, filename=recipe_file)
 
@@ -560,7 +560,7 @@ def makeHomebrewRecipeTestFactory():
     factory.addSteps(installDependencies())
 
     factory.addSteps(setRecipeVersionProperty())
-    recipe_file = Interpolate('Flocker%(prop:recipe_version)s.rb')
+    recipe_file = Interpolate('flocker-%(prop:recipe_version)s.rb')
 
     recipe_url = resultURL('homebrew',
                            isAbsolute=True,
