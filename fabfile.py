@@ -27,14 +27,14 @@ def loadConfig(configFile, use_acceptance_config=True):
     if configFile is not None:
         config = yaml.safe_load(open(configFile))
     else:
-        config = get_lastpass_config("config@build.clusterhq.com")
+        config = get_lastpass_config("config@build.labs.clusterhq.com")
 
     if not env.hosts:
         env.hosts = [config['buildmaster']['host']]
 
     if use_acceptance_config:
         acceptance_config = get_lastpass_config(
-            "acceptance@build.clusterhq.com")
+            "acceptance@build.labs.clusterhq.com")
         config['acceptance'] = {
             'ssh-key': acceptance_config['ssh-key'],
             'config': yaml.safe_dump(acceptance_config['config']),
@@ -163,7 +163,7 @@ def getConfig():
     Get credentials from lastpass.
     """
     local(cmd('cp', 'config.yml', 'config.yml.bak'))
-    local('lpass show --notes "config@build.clusterhq.com" >config.yml')
+    local('lpass show --notes "config@build.labs.clusterhq.com" >config.yml')
 
 
 @task
@@ -171,9 +171,9 @@ def saveConfig():
     """
     Put credentials in lastpass.
     """
-    local('lpass show --notes "config@build.clusterhq.com" >config.yml.old')
+    local('lpass show --notes "config@build.labs.clusterhq.com" >config.yml.old')
     local('lpass edit --non-interactive '
-          '--notes "config@build.clusterhq.com" <config.yml')
+          '--notes "config@build.labs.clusterhq.com" <config.yml')
 
 
 @task
