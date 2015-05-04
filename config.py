@@ -97,11 +97,11 @@ for base, slaveConfig in privateData['slaves'].items():
 # multiple change sources (eg, multiple repositories being fetched for a single
 # build).
 
-FLOCKER_REPOSITORY = "git@github.com:ClusterHQ/flocker.git"
+FLOCKER_PLUGIN_REPOSITORY = "git@github.com:ClusterHQ/powerstrip-flocker.git"
 
 CODEBASES = {
-    FLOCKER_REPOSITORY: "flocker",
-    "https://github.com/ClusterHQ/flocker": "flocker",
+    FLOCKER_PLUGIN_REPOSITORY: "powerstrip-flocker",
+    "https://github.com/ClusterHQ/powerstrip-flocker": "powerstrip-flocker",
     }
 
 c['codebaseGenerator'] = lambda change: CODEBASES[change["repository"]]
@@ -110,7 +110,7 @@ c['change_source'] = []
 
 ####### BUILDERS
 
-from flocker_bb.builders import flocker, maint, flocker_vagrant
+from flocker_bb.builders import maint, flockerplugin_vagrant
 
 c['builders'] = []
 c['schedulers'] = []
@@ -120,8 +120,7 @@ def addBuilderModule(module):
     c['builders'].extend(module.getBuilders(SLAVENAMES))
     c['schedulers'].extend(module.getSchedulers())
 
-addBuilderModule(flocker)
-addBuilderModule(flocker_vagrant)
+addBuilderModule(flockerplugin_vagrant)
 addBuilderModule(maint)
 
 
