@@ -3,9 +3,8 @@ from pipes import quote as shellQuote
 import yaml
 import json
 
-# We assume we are running on a fedora 20 AWS image.
-# These are setup with an `fedora` user, so hard code that.
-env.user = 'fedora'
+# The dedicated server for skunkworks runs ubuntu 14.04
+env.user = 'ubuntu'
 
 
 def cmd(*args):
@@ -60,7 +59,7 @@ def removeContainer(name):
         sudo(cmd('docker', 'rm', '-f', name))
 
 
-def imageFromConfig(config, baseImage='clusterhq/build.clusterhq.com'):
+def imageFromConfig(config, baseImage='lmarsden/build.labs.clusterhq.com'):
     """
     Get the image to use from the configuration.
 
