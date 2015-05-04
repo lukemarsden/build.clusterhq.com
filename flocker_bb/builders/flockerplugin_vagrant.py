@@ -380,58 +380,14 @@ class AcceptanceConfiguration(object):
 ACCEPTEANCE_CONFIGURATIONS = [
     AcceptanceConfiguration(
         provider='vagrant', distribution='fedora-20'),
-    AcceptanceConfiguration(
-        provider='rackspace', distribution='fedora-20'),
-    AcceptanceConfiguration(
-        provider='rackspace', distribution='fedora-20',
-        variants={'docker-head'}),
-    AcceptanceConfiguration(
-        provider='rackspace', distribution='fedora-20',
-        variants={'zfs-testing'}),
-    AcceptanceConfiguration(
-        provider='rackspace', distribution='fedora-20',
-        variants={'distro-testing'}),
-    AcceptanceConfiguration(
-        provider='rackspace', distribution='ubuntu-14.04'),
-    AcceptanceConfiguration(
-        provider='rackspace', distribution='centos-7'),
-    AcceptanceConfiguration(
-        provider='rackspace', distribution='centos-7',
-        variants={'docker-head'}),
-    AcceptanceConfiguration(
-        provider='rackspace', distribution='centos-7',
-        variants={'zfs-testing'}),
 ]
 
 
-rackspace_lock = MasterLock("rackspace-lock", maxCount=12)
-ACCEPTANCE_LOCKS = {
-    # 256000M available ram, 8192M per node, 2 nodes per test
-    # We allocate slightly less to avoid using all the RAM.
-    'rackspace': [rackspace_lock.access("counting")],
-}
+ACCEPTANCE_LOCKS = {}
 
 
 def getBuilders(slavenames):
-    builders = [
-        BuilderConfig(name='flocker-vagrant-dev-box',
-                      slavenames=slavenames['fedora-vagrant'],
-                      category='flocker',
-                      factory=buildDevBox(),
-                      nextSlave=idleSlave),
-        BuilderConfig(name='flocker-vagrant-tutorial-box',
-                      slavenames=slavenames['fedora-vagrant'],
-                      category='flocker',
-                      factory=buildTutorialBox(),
-                      nextSlave=idleSlave),
-        BuilderConfig(name='flocker/installed-package/fedora-20',
-                      builddir='flocker-installed-package-fedora-20',
-                      slavenames=slavenames['fedora-vagrant'],
-                      category='flocker',
-                      factory=test_installed_package(
-                          box='tutorial'),
-                      nextSlave=idleSlave),
-        ]
+    builders = []
     for configuration in ACCEPTEANCE_CONFIGURATIONS:
         builders.append(BuilderConfig(
             name=configuration.builder_name,
@@ -444,53 +400,16 @@ def getBuilders(slavenames):
     return builders
 
 BUILDERS = [
-    'flocker-vagrant-dev-box',
-    'flocker-vagrant-tutorial-box',
-    'flocker/installed-package/fedora-20',
-] + [
     configuration.builder_name
     for configuration in ACCEPTEANCE_CONFIGURATIONS
 ]
 
-from ..steps import MergeForward, report_expected_failures_parameter
-
 
 def getSchedulers():
     schedulers = [
-        AnyBranchScheduler(
-            name="flocker-vagrant",
-            treeStableTimer=5,
-            builderNames=['flocker-vagrant-dev-box'],
-            codebases={
-                "flocker": {"repository": GITHUB + b"/flocker"},
-            },
-            change_filter=ChangeFilter(
-                branch_fn=lambda branch:
-                    (MergeForward._isMaster(branch)
-                        or MergeForward._isRelease(branch)),
-            )
-        ),
-        ForceScheduler(
-            name="force-flocker-vagrant",
-            codebases=[
-                CodebaseParameter(
-                    "flocker",
-                    branch=StringParameter(
-                        "branch", default="master", size=80),
-                    repository=FixedParameter("repository",
-                                              default=GITHUB + b"/flocker"),
-                ),
-            ],
-            properties=[
-                report_expected_failures_parameter,
-            ],
-            builderNames=BUILDERS,
-        ),
         Triggerable(
             name='trigger/built-vagrant-box/flocker-tutorial',
             builderNames=[
-                'flocker/installed-package/fedora-20',
-            ] + [
                 configuration.builder_name
                 for configuration in ACCEPTEANCE_CONFIGURATIONS
                 if configuration.provider == 'vagrant'
@@ -507,8 +426,6 @@ def getSchedulers():
             if configuration.provider != 'vagrant'
             and configuration.distribution == distribution
         ]
-        if distribution == 'fedora-20':
-            builders.append('flocker-vagrant-tutorial-box')
         schedulers.append(
             Triggerable(
                 name='trigger/built-packages/%s' % (distribution,),
