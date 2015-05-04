@@ -104,8 +104,7 @@ def bootstrap():
     """
     Install docker, and setup data volume.
     """
-    sudo('yum update -y')
-    sudo('yum install -y docker-io')
+    sudo('wget -qO- https://get.docker.com/ | sh')
     sudo('systemctl enable docker')
     sudo('systemctl start docker')
 
