@@ -36,7 +36,7 @@ def configure_acceptance():
 
 
 @task
-def install(index, password, master='build.staging.clusterhq.com'):
+def install(index, password, master='build.labs.clusterhq.com'):
     """
     Install a buildslave with vagrant installed.
     """
