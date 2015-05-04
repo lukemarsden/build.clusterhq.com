@@ -4,7 +4,7 @@ import yaml
 import json
 
 # The dedicated server for skunkworks runs ubuntu 14.04
-env.user = 'ubuntu'
+env.user = 'root'
 
 
 def cmd(*args):
