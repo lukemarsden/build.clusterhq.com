@@ -12,6 +12,8 @@ from StringIO import StringIO
 import yaml
 
 env.user = "root"
+# https://github.com/fabric/fabric/issues/60
+env.shell = "/bin/bash -c"
 
 
 def configure_acceptance():
