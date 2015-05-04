@@ -32,6 +32,9 @@ def loadConfig(configFile, use_acceptance_config=True):
     if not env.hosts:
         env.hosts = [config['buildmaster']['host']]
 
+    # rip out acceptance config for now, skunkworks doesn't need to auto spin
+    # up on clouds yet...
+    """
     if use_acceptance_config:
         acceptance_config = get_lastpass_config(
             "acceptance@build.labs.clusterhq.com")
@@ -40,7 +43,8 @@ def loadConfig(configFile, use_acceptance_config=True):
             'config': yaml.safe_dump(acceptance_config['config']),
         }
     else:
-        config['acceptance'] = {}
+    """
+    config['acceptance'] = {}
     return config
 
 
