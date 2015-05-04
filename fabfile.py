@@ -109,8 +109,6 @@ def bootstrap():
     Install docker, and setup data volume.
     """
     sudo('wget -qO- https://get.docker.com/ | sh')
-    sudo('systemctl enable docker')
-    sudo('systemctl start docker')
 
     if not containerExists('buildmaster-data'):
         sudo(cmd('docker', 'run',
