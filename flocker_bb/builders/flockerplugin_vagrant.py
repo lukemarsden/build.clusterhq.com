@@ -194,7 +194,7 @@ def buildDevBox():
 
 
 def buildTutorialBox():
-    factory = getFlockerFactory()
+    factory = getFlockerPluginFactory()
 
     # We have to insert this before the first step, so we don't
     # destroy the vagrant meta-data. Normally .addStep adapts
@@ -219,7 +219,7 @@ def buildTutorialBox():
 
 
 def run_acceptance_tests(configuration):
-    factory = getFlockerFactory()
+    factory = getFlockerPluginFactory()
 
     if configuration.provider == 'vagrant':
         # We have to insert this before the first step, so we don't
@@ -275,7 +275,7 @@ end
 
 
 def test_installed_package(box):
-    factory = getFlockerFactory()
+    factory = getFlockerPluginFactory()
 
     factory.addStep(
         destroy_box(path='test'))
