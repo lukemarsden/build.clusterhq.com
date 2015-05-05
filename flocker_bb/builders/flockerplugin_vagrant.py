@@ -221,6 +221,7 @@ def buildTutorialBox():
 def run_acceptance_tests(configuration):
     factory = getFlockerPluginFactory()
 
+    """
     if configuration.provider == 'vagrant':
         # We have to insert this before the first step, so we don't
         # destroy the vagrant meta-data. Normally .addStep adapts
@@ -228,6 +229,7 @@ def run_acceptance_tests(configuration):
         factory.steps.insert(0, IBuildStepFactory(
             destroy_box(path='build/admin/vagrant-acceptance-targets/%s'
                              % configuration.distribution)))
+    """
 
     factory.addSteps(_flockerTests(
         kwargs={
