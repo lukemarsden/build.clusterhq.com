@@ -33,8 +33,8 @@ def dotted_version(version):
     return render
 
 
-def getFlockerFactory():
-    factory = getFactory("powerstrip-flocker", useSubmodules=False, mergeForward=True)
+def getFlockerPluginFactory():
+    factory = getFactory("powerstrip-flocker", useSubmodules=True, mergeForward=True)
     factory.addSteps(buildVirtualEnv("python2.7", useSystem=True))
     factory.addSteps(installDependencies())
     return factory
@@ -148,7 +148,7 @@ def buildDevBox():
     """
     Build a vagrant dev box.
     """
-    factory = getFlockerFactory()
+    factory = getFlockerPluginFactory()
 
     # We have to insert this before the first step, so we don't
     # destroy the vagrant meta-data. Normally .addStep adapts
