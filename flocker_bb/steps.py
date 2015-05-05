@@ -82,7 +82,7 @@ def buildVirtualEnv(python, useSystem=False):
         name="make-venv-directory",
         description=["make", "virtualenv", "directory"],
         descriptionDone=["made", "virtualenv", "directory"],
-        command=["mkdir", "-p", VIRTUALENV_DIR],
+        command=["mkdir", "-p", Interpolate(VIRTUALENV_DIR)],
         haltOnFailure=True,
     ))
     if useSystem:
