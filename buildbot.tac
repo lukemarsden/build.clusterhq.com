@@ -18,7 +18,7 @@ if 'zulip' in privateData:
     ZULIP_KEY = privateData['zulip']['password']
     zulip = createZulip(reactor, ZULIP_BOT, ZULIP_KEY)
 
-    ZulipLogger(zulip=zulip, stream="BuildBot - Operation").start()
+    ZulipLogger(zulip=zulip, stream="BuildBot - skunkworks operation").start()
 
 from twisted.application import service
 from buildbot.master import BuildMaster
