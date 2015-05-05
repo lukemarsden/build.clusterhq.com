@@ -27,16 +27,18 @@ def install(index, password, master='build.labs.clusterhq.com'):
     Install a buildslave with vagrant installed.
     """
     run("apt-get install -y virtualbox virtualbox-dkms buildbot-slave")
-    run("wget https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.2_x86_64.deb && dpkg -i vagrant_1.7.2_x86_64.deb")
+    run("if [ ! -e vagrant_1.7.2_x86_64.deb ]; then wget https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.2_x86_64.deb && dpkg -i vagrant_1.7.2_x86_64.deb; fi")
     run("useradd buildslave || true")
+    run("mkdir -p /home/buildslave/fedora-vagrant")
+    run("chown -R buildslave /home/buildslave")
+
     sudo("buildslave create-slave /home/buildslave/fedora-vagrant %(master)s fedora-vagrant-%(index)s %(password)s"
          % {'index': index, 'password': password, 'master': master},
          user='buildslave')
     put(FilePath(__file__).sibling('start').path,
         '/home/buildslave/fedora-vagrant/start', mode=0755)
 
-    sudo("vagrant plugin install vagrant-reload vagrant-vbguest",
-         user='buildslave')
+    sudo("vagrant plugin install vagrant-reload vagrant-vbguest")
     configure_acceptance()
 
     put(FilePath(__file__).sibling('vagrant-slave.conf').path,
