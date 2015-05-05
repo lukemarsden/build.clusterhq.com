@@ -414,7 +414,7 @@ def getSchedulers():
             name="force-flocker-plugin-vagrant",
             codebases=[
                 CodebaseParameter(
-                    "flocker-plugin",
+                    "powerstrip-flocker",
                     branch=StringParameter(
                         "branch", default="master", size=80),
                     repository=FixedParameter("repository",
