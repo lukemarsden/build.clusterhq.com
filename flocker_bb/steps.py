@@ -78,13 +78,6 @@ def resultURL(kind, isAbsolute=False, **kwargs):
 
 def buildVirtualEnv(python, useSystem=False):
     steps = []
-    steps.append(ShellCommand(
-        name="make-venv-directory",
-        description=["make", "virtualenv", "directory"],
-        descriptionDone=["made", "virtualenv", "directory"],
-        command=["mkdir", "-p", Interpolate(VIRTUALENV_DIR)],
-        haltOnFailure=True,
-    ))
     if useSystem:
         command = ['virtualenv', '-p', python]
     else:
