@@ -404,9 +404,28 @@ BUILDERS = [
     for configuration in ACCEPTEANCE_CONFIGURATIONS
 ]
 
+from buildbot.schedulers.forcesched import (
+    CodebaseParameter, StringParameter, ForceScheduler, FixedParameter)
+from ..steps import MergeForward, report_expected_failures_parameter
 
 def getSchedulers():
     schedulers = [
+        ForceScheduler(
+            name="force-flocker-plugin-vagrant",
+            codebases=[
+                CodebaseParameter(
+                    "flocker-plugin",
+                    branch=StringParameter(
+                        "branch", default="master", size=80),
+                    repository=FixedParameter("repository",
+                                              default=GITHUB + b"/powerstrip-flocker"),
+                ),
+            ],
+            properties=[
+                report_expected_failures_parameter,
+            ],
+            builderNames=BUILDERS,
+        ),
         Triggerable(
             name='trigger/built-vagrant-box/flocker-tutorial',
             builderNames=[
