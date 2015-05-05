@@ -34,7 +34,7 @@ def dotted_version(version):
 
 
 def getFlockerFactory():
-    factory = getFactory("flocker", useSubmodules=False, mergeForward=True)
+    factory = getFactory("powerstrip-flocker", useSubmodules=False, mergeForward=True)
     factory.addSteps(buildVirtualEnv("python2.7", useSystem=True))
     factory.addSteps(installDependencies())
     return factory
