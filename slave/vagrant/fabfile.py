@@ -27,6 +27,7 @@ def install(index, password, master='build.labs.clusterhq.com'):
     Install a buildslave with vagrant installed.
     """
     run("apt-get install -y virtualbox virtualbox-dkms buildbot-slave mongodb libffi-dev python-dev python-virtualenv linux-headers-generic linux-headers-`uname -r`")
+    run("dpkg-reconfigure virtualbox-dkms")
     run("if [ ! -e vagrant_1.7.2_x86_64.deb ]; then wget https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.2_x86_64.deb && dpkg -i vagrant_1.7.2_x86_64.deb; fi")
     run("useradd buildslave || true")
     run("mkdir -p /home/buildslave/fedora-vagrant")
