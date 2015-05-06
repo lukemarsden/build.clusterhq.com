@@ -328,7 +328,7 @@ class MergeForward(Source):
         return d
 
 
-def pip(what, packages):
+def pip(what, packages, flags=[]):
     """
     Installs a list of packages with pip, in the current virtualenv.
 
@@ -341,9 +341,7 @@ def pip(what, packages):
         description=["installing", what],
         descriptionDone=["install", what],
         command=[Interpolate(path.join(VIRTUALENV_DIR, "bin/pip")),
-                 "install",
-                 packages,
-                 ],
+                 "install"] + flags + [packages],
         haltOnFailure=True)
 
 

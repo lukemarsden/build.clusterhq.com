@@ -17,7 +17,16 @@ from ..steps import (
     )
 
 # FIXME
-from flocker_bb.builders.flocker import installDependencies, _flockerTests
+from flocker_bb.builders.flocker import _flockerTests
+
+from ..steps import pip
+
+def installDependencies():
+    return [
+        pip("dependencies", ["."]),
+        pip("flocker-dependencies", ["./flocker/[doc,dev,release]"], flags=["-e"]), # magical flag which means "support installing extras from a named path"
+        #pip("extras", ["Flocker[doc,dev,release]"]),
+        ]
 
 
 from characteristic import attributes, Attribute
