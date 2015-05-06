@@ -20,7 +20,6 @@ from ..steps import (
 # FIXME
 from flocker_bb.builders.flocker import _flockerTests
 
-import os
 from characteristic import attributes, Attribute
 
 
@@ -240,13 +239,6 @@ def run_acceptance_tests(configuration):
                              % configuration.distribution)))
     """
 
-    factory.addStep(ShellCommand(
-        name='build-docker-binary',
-        description=['inject', 'docker', 'binary'],
-        descriptionDone=['injected', 'docker', 'binary'],
-        command=['./inject-docker-binary.sh'],
-        alwaysRun=True,
-        ))
     factory.addSteps(_flockerTests(
         kwargs={
             'trialMode': [],
