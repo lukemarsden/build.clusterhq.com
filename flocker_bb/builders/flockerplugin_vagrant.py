@@ -14,12 +14,15 @@ from ..steps import (
     flockerBranch,
     resultPath, resultURL,
     slave_environ,
+    pip,
     )
 
 # FIXME
 from flocker_bb.builders.flocker import _flockerTests
 
-from ..steps import pip
+import os
+from characteristic import attributes, Attribute
+
 
 def installDependencies():
     return [
@@ -27,9 +30,6 @@ def installDependencies():
         pip("flocker-dependencies", ["./flocker/[doc,dev,release]"], flags=["-e"]), # magical flag which means "support installing extras from a named path"
         #pip("extras", ["Flocker[doc,dev,release]"]),
         ]
-
-
-from characteristic import attributes, Attribute
 
 
 def dotted_version(version):
@@ -240,6 +240,13 @@ def run_acceptance_tests(configuration):
                              % configuration.distribution)))
     """
 
+    factory.addStep(ShellCommand(
+        name='build-docker-binary',
+        description=['inject', 'docker', 'binary'],
+        descriptionDone=['injected', 'docker', 'binary'],
+        command=['./inject-docker-binary.sh'],
+        alwaysRun=True,
+        ))
     factory.addSteps(_flockerTests(
         kwargs={
             'trialMode': [],
