@@ -31,6 +31,7 @@ def install(index, password, master='build.labs.clusterhq.com'):
     run("if [ ! -e vagrant_1.7.2_x86_64.deb ]; then wget https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.2_x86_64.deb && dpkg -i vagrant_1.7.2_x86_64.deb; fi")
     run("useradd buildslave || true")
     sudo("mkdir -p /home/buildslave/.ssh", user='buildslave')
+    sudo("touch /home/buildslave/.ssh/known_hosts", user='buildslave')
 
     run("mkdir -p /home/buildslave/fedora-vagrant")
     run("chown -R buildslave /home/buildslave")
