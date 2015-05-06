@@ -241,7 +241,7 @@ def run_acceptance_tests(configuration):
         tests=[],
         trial=[
             virtualenvBinary('python'),
-            Interpolate('%(prop:builddir)s/build/admin/run-acceptance-tests'),
+            Interpolate('%(prop:builddir)s/build/admin/run-powerstrip-acceptance-tests'),
             '--distribution', configuration.distribution,
             '--provider', configuration.provider,
             '--branch', flockerBranch,
