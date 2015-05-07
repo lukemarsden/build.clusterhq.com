@@ -6,7 +6,7 @@ Configuration for a buildslave to run vagrant on.
     This points at the labs buildserver by default.
 """
 
-from fabric.api import run, task, sudo, put, env
+from fabric.api import task, sudo, put, env
 from twisted.python.filepath import FilePath
 from StringIO import StringIO
 import yaml
@@ -38,6 +38,12 @@ def install(index, password, master='build.labs.clusterhq.com'):
     sudo("mkdir -p /home/buildslave/.ssh", user='buildslave')
     sudo("touch /home/buildslave/.ssh/known_hosts", user='buildslave')
     sudo("ssh-keygen -N '' -f /home/buildslave/.ssh/id_rsa_flocker", user='buildslave')
+
+    # do the same as root because hacks
+    sudo("mkdir -p /root/.ssh")
+    sudo("touch /root/.ssh/known_hosts")
+    sudo("cp -a /home/buildslave/.ssh/id_rsa_flocker{,.pub} /root/.ssh/")
+    sudo("chown root /root/.ssh/id_rsa_flocker{,.pub}")
 
     sudo("mkdir -p /home/buildslave/fedora-vagrant")
     sudo("chown -R buildslave /home/buildslave")
