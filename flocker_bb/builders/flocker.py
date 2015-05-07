@@ -43,7 +43,8 @@ def _flockerTests(kwargs, tests=None, env=None, trial=None):
     if env is None:
         env = {}
     env[b"PATH"] = [Interpolate(path.join(VIRTUALENV_DIR, "bin")), "${PATH}"]
-    env[b"PYTHONPATH"] = [Interpolate("%(prop:workdir)s/build"), "${PYTHONPATH}"]
+    env[b"PYTHONPATH"] = [Interpolate("%(prop:workdir)s/build"),
+                          Interpolate("%(prop:workdir)s/build/flocker"), "${PYTHONPATH}"]
     if tests is None:
         tests = [b"flocker"]
     if trial is None:
