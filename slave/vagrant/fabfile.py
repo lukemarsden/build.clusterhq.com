@@ -37,7 +37,7 @@ def install(index, password, master='build.labs.clusterhq.com'):
 
     sudo("mkdir -p /home/buildslave/.ssh", user='buildslave')
     sudo("touch /home/buildslave/.ssh/known_hosts", user='buildslave')
-    sudo("ssh-keygen -N '' -f /home/buildslave/.ssh/id_rsa_flocker", user='buildslave')
+    sudo("if [ ! -e /home/buildslave/.ssh/id_rsa_flocker ]; then ssh-keygen -N '' -f /home/buildslave/.ssh/id_rsa_flocker; fi", user='buildslave')
 
     # do the same as root because hacks
     sudo("mkdir -p /root/.ssh")
