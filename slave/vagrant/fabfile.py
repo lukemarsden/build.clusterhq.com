@@ -26,17 +26,21 @@ def install(index, password, master='build.labs.clusterhq.com'):
     """
     Install a buildslave with vagrant installed.
     """
-    run("apt-get install -y virtualbox virtualbox-dkms buildbot-slave mongodb libffi-dev python-dev python-virtualenv linux-headers-generic linux-headers-`uname -r` libssl-dev")
-    run("dpkg-reconfigure virtualbox-dkms")
-    run("if [ ! -e vagrant_1.7.2_x86_64.deb ]; then wget https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.2_x86_64.deb && dpkg -i vagrant_1.7.2_x86_64.deb; fi")
-    run("useradd buildslave || true")
+    sudo("apt-get install -y virtualbox virtualbox-dkms buildbot-slave mongodb libffi-dev python-dev python-virtualenv linux-headers-generic linux-headers-`uname -r` libssl-dev")
+    sudo("dpkg-reconfigure virtualbox-dkms")
+    sudo("if [ ! -e vagrant_1.7.2_x86_64.deb ]; then wget https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.2_x86_64.deb && dpkg -i vagrant_1.7.2_x86_64.deb; fi")
+    sudo("useradd buildslave || true")
+
+    # docker is used to build docker in docker by some buildslaves
+    sudo('wget -qO- https://get.docker.com/ | sh')
+    sudo("adduser buildslave docker")
 
     sudo("mkdir -p /home/buildslave/.ssh", user='buildslave')
     sudo("touch /home/buildslave/.ssh/known_hosts", user='buildslave')
     sudo("ssh-keygen -N '' -f /home/buildslave/.ssh/id_rsa_flocker", user='buildslave')
 
-    run("mkdir -p /home/buildslave/fedora-vagrant")
-    run("chown -R buildslave /home/buildslave")
+    sudo("mkdir -p /home/buildslave/fedora-vagrant")
+    sudo("chown -R buildslave /home/buildslave")
 
     sudo("buildslave create-slave /home/buildslave/fedora-vagrant %(master)s fedora-vagrant-%(index)s %(password)s"
          % {'index': index, 'password': password, 'master': master},
@@ -50,4 +54,4 @@ def install(index, password, master='build.labs.clusterhq.com'):
     put(FilePath(__file__).sibling('vagrant-slave.conf').path,
         '/etc/init/vagrant-slave.conf')
 
-    run('start vagrant-slave')
+    sudo('start vagrant-slave')
