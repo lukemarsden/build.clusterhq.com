@@ -420,6 +420,14 @@ from ..steps import MergeForward, report_expected_failures_parameter
 
 def getSchedulers():
     schedulers = [
+        AnyBranchScheduler(
+            name="powerstrip-flocker",
+            treeStableTimer=5,
+            builderNames=BUILDERS,
+            codebases={
+                "powerstrip-flocker": {"repository": GITHUB + b"/powerstrip-flocker"},
+            },
+        ),
         ForceScheduler(
             name="force-flocker-plugin-vagrant",
             codebases=[
@@ -435,17 +443,6 @@ def getSchedulers():
                 report_expected_failures_parameter,
             ],
             builderNames=BUILDERS,
-        ),
-        Triggerable(
-            name='trigger/built-vagrant-box/flocker-tutorial',
-            builderNames=[
-                configuration.builder_name
-                for configuration in ACCEPTEANCE_CONFIGURATIONS
-                if configuration.provider == 'vagrant'
-            ],
-            codebases={
-                "flocker": {"repository": GITHUB + b"/flocker"},
-            },
         ),
     ]
     for distribution in ('fedora-20', 'centos-7', 'ubuntu-14.04'):
