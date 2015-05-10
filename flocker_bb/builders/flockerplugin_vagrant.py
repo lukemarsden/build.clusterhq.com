@@ -342,14 +342,8 @@ from buildbot.schedulers.basic import AnyBranchScheduler
 from buildbot.schedulers.forcesched import (
     CodebaseParameter, StringParameter, ForceScheduler, FixedParameter)
 from buildbot.schedulers.triggerable import Triggerable
-from buildbot.changes.filter import ChangeFilter
-
 
 from ..steps import idleSlave
-
-
-from buildbot.locks import MasterLock
-
 
 # Dictionary mapping providers for acceptence testing to a list of
 # sets of variants to test on each provider.
@@ -390,7 +384,7 @@ class AcceptanceConfiguration(object):
 
 ACCEPTEANCE_CONFIGURATIONS = [
     AcceptanceConfiguration(
-        provider='vagrant', distribution='fedora-20'),
+        provider='vagrant', distribution='ubuntu-14.04'),
 ]
 
 
@@ -415,9 +409,7 @@ BUILDERS = [
     for configuration in ACCEPTEANCE_CONFIGURATIONS
 ]
 
-from buildbot.schedulers.forcesched import (
-    CodebaseParameter, StringParameter, ForceScheduler, FixedParameter)
-from ..steps import MergeForward, report_expected_failures_parameter
+from ..steps import report_expected_failures_parameter
 
 def getSchedulers():
     schedulers = [
