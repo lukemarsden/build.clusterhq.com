@@ -1,4 +1,5 @@
 FROM fedora:20
+RUN sed -i s/metalink/#metalink/g /etc/yum.repos.d/fedora-updates.repo && sed -i s/#baseurl/baseurl/g /etc/yum.repos.d/fedora-updates.repo
 #ADD https://copr.fedoraproject.org/coprs/tomprince/hybridlogic/repo/fedora-20-x86_64/tomprince-hybridlogic-fedora-20-x86_64.repo /etc/yum.repos.d/
 ADD tomprince-hybridlogic-fedora-20-x86_64.repo /etc/yum.repos.d/
 #RUN yum upgrade -y

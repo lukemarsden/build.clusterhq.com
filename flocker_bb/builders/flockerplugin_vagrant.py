@@ -256,7 +256,7 @@ def run_acceptance_tests(configuration):
             '--build-server', buildbotURL,
             '--config-file', Interpolate("%(kw:home)s/acceptance.yml",
                                          home=slave_environ("HOME")),
-            '--keep',
+            #'--keep',
         ] + [
             ['--variant', variant]
             for variant in configuration.variants
